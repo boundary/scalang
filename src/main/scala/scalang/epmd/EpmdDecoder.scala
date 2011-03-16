@@ -16,10 +16,12 @@ class EpmdDecoder extends FrameDecoder {
         if (buffer.readableBytes < 4) return null
         val result = buffer.getByte(1)
         val creation = buffer.getShort(2)
+        buffer.skipBytes(4)
         AliveResp(result, creation)
       case 119 => //decode port2 resp
         val result = buffer.getByte(1)
         if (result > 0) {
+          buffer.skipBytes(2)
           PortPleaseError(result)
         } else {
           if (buffer.readableBytes < 12) return null
@@ -31,6 +33,7 @@ class EpmdDecoder extends FrameDecoder {
           val bytes = new Array[Byte](nlen)
           buffer.getBytes(12, bytes)
           val nodeName = new String(bytes)
+          buffer.skipBytes(14+nlen+elen)
           PortPleaseResp(portNo, nodeName)
         }
     }

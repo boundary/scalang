@@ -10,6 +10,7 @@ import netty.handler.codec.frame._
 
 class EpmdDecoder extends FrameDecoder {
   override def decode(ctx : ChannelHandlerContext, channel : Channel, buffer : ChannelBuffer) : Object = {
+    if (buffer.readableBytes < 1) return null
     val header = buffer.getByte(0)
     header match {
       case 121 => //decode alive2 resp

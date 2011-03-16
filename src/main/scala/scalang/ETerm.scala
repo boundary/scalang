@@ -1,0 +1,5 @@
+package scalang
+
+trait ETerm {
+  
+}

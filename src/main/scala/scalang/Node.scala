@@ -1,6 +1,12 @@
 package scalang
 
 import java.util.concurrent.atomic._
+import java.net.InetSocketAddress
+import java.util.concurrent.Executors
+import org.jboss.{netty => netty}
+import netty.channel._
+import netty.bootstrap._
+import socket.nio.NioServerSocketChannelFactory
 
 object Node {
   def apply() {
@@ -18,8 +24,7 @@ trait Node {
   def nodes : Seq[String]
 }
 
-/*class ConcreteNode(name : String, host : String, cookie : String) extends Node {
-  val creation = new AtomicInteger(0)
-  
-  
+/*class ErlangNode(val name : String, val host : String, val cookie : String) extends Node {
+
 }*/
+

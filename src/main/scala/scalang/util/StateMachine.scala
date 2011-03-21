@@ -34,7 +34,7 @@ trait StateMachine {
   case class State(name : Symbol, transitions : PartialFunction[Any,Symbol]) {
     def event(evnt : Any) : Symbol = {
       if (!transitions.isDefinedAt(evnt)) {
-        val ex =  new UnexpectedEventException("State " + name + " does not have a transition for event " + evnt)
+        throw new UnexpectedEventException("State " + name + " does not have a transition for event " + evnt)
       } else {
         transitions(evnt)
       }

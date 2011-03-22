@@ -31,7 +31,7 @@ class HandshakeDecoder extends OneToOneDecoder {
         val nameLength = buffer.readableBytes
         val bytes = new Array[Byte](nameLength)
         buffer.readBytes(bytes)
-        ChallengeMessage(version, flags, challenge)
+        ChallengeMessage(version, flags, challenge, new String(bytes))
       case (_, 115) => //status message
         val statusLength = buffer.readableBytes
         val bytes = new Array[Byte](statusLength)

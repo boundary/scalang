@@ -13,14 +13,14 @@ class ServerHandshakeHandlerSpec extends Specification {
   
   "ServerHandshakeHandler" should {
     "complete a standard handshake" in {
-      val handshake = new ServerHandshakeHandler(cookie)
+      val handshake = new ServerHandshakeHandler("tmp@blah", cookie)
       val embedder = new TwoWayCodecEmbedder[Any](handshake)
       embedder.upstreamMessage(NameMessage(5, 32765, "tmp@moonpolysoft.local"))
       val status = embedder.poll
       status must ==(StatusMessage("ok"))
       var challenge = 0
       val challengeMsg = embedder.poll
-      challengeMsg must beLike { case ChallengeMessage(5, _, c : Int) => 
+      challengeMsg must beLike { case ChallengeMessage(5, _, c : Int, _) => 
         challenge = c
         true }
       println("challenge " + challenge)

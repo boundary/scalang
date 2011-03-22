@@ -31,7 +31,7 @@ class ClientHandshakeHandler(name : String, cookie : String) extends HandshakeHa
     }),
     
     state('status_ok, {
-      case ChallengeMessage(version, flags, c) =>
+      case ChallengeMessage(version, flags, c, _) =>
         sendChallengeReply(c)
         'reply_sent
     }),

@@ -6,7 +6,7 @@ case class NameMessage(version : Short, flags : Int, name : String)
 
 case class StatusMessage(status : String)
 
-case class ChallengeMessage(version : Short, flags : Int, challenge : Int)
+case class ChallengeMessage(version : Short, flags : Int, challenge : Int, name : String)
 
 case class ChallengeReplyMessage(challenge : Int, digest : Array[Byte])
 

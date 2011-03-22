@@ -19,7 +19,7 @@ class ClientHandshakeHandlerSpec extends Specification {
       val nameMsg = embedder.poll
       nameMsg must beLike { case NameMessage(5, _, node) => true }
       embedder.upstreamMessage(StatusMessage("ok"))
-      embedder.upstreamMessage(ChallengeMessage(5, 32765, 15000))
+      embedder.upstreamMessage(ChallengeMessage(5, 32765, 15000, "tmp@blah"))
       val respMsg = embedder.poll
       var challenge = 0
       respMsg must beLike { case ChallengeReplyMessage(c, digest) =>

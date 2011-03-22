@@ -40,7 +40,7 @@ class HandshakeDecoderSpec extends Specification {
       val buffer = copiedBuffer(bytes)
       embedder.offer(buffer)
       val msg = embedder.poll
-      msg must ==(ChallengeMessage(5, 32765, 80085))
+      msg must ==(ChallengeMessage(5, 32765, 80085, "tmp@blah"))
     }
     
     "decode reply messages" in {

@@ -94,7 +94,11 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
     }
     messages.clear
     
-    ctx.getPipeline.remove(this)
+    val p = ctx.getPipeline
+    val keys = p.toMap.keySet
+    for (name <- List("handshakeFramer", "handshakeDecoder", "handshakeEncoder", "handshakeHandler"); if keys.contains(name)) {
+      p.remove(name)
+    }
   }
   
   protected def handshakeSucceeded {

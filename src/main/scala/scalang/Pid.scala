@@ -1,5 +1,3 @@
 package scalang
 
-trait Pid {
-  
-}
+case class Pid(node : Symbol, id : Int, serial : Int, creation : Int)

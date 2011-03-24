@@ -15,16 +15,45 @@ object Node {
 }
 
 trait Node {
+  def name : Symbol
+  def cookie : String
   def createProcess(process : Process) : Pid
   def createProcess(regName : String, process : Process) : Pid
   def registerName(regName : String, pid : Pid)
-  def getNames : Seq[String]
-  def whereis(name : String) : Option[Pid]
+  def getNames : Set[String]
+  def whereis(name : Symbol) : Option[Pid]
   def ping(node : String, timeout : Long)
-  def nodes : Seq[String]
+  def nodes : Set[String]
 }
 
-/*class ErlangNode(val name : String, val host : String, val cookie : String) extends Node {
-
-}*/
+class ErlangNode(val name : Symbol, val host : String, val cookie : String) extends Node {
+  
+  def createProcess(process : Process) : Pid = {
+    null
+  }
+  
+  def createProcess(regName : String, process : Process) : Pid = {
+    null
+  }
+  
+  def registerName(regName : String, pid : Pid) {
+    
+  }
+  
+  def getNames : Set[String] = {
+    null
+  }
+  
+  def whereis(regName : Symbol) : Option[Pid] = {
+    None
+  }
+  
+  def ping(node : String, timeout : Long) {
+    
+  }
+  
+  def nodes : Set[String] = {
+    null
+  }
+}
 

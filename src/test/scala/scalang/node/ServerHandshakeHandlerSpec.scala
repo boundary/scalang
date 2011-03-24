@@ -13,7 +13,7 @@ class ServerHandshakeHandlerSpec extends Specification {
   
   "ServerHandshakeHandler" should {
     "complete a standard handshake" in {
-      val handshake = new ServerHandshakeHandler("tmp@blah", cookie)
+      val handshake = new ServerHandshakeHandler(Symbol("tmp@blah"), cookie)
       val embedder = new TwoWayCodecEmbedder[Any](handshake)
       embedder.upstreamMessage(NameMessage(5, 32765, "tmp@moonpolysoft.local"))
       val status = embedder.poll

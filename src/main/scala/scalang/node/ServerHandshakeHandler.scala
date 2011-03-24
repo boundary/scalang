@@ -15,7 +15,7 @@ import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 
-class ServerHandshakeHandler(node : String, cookie : String) extends HandshakeHandler {
+class ServerHandshakeHandler(node : Symbol, cookie : String) extends HandshakeHandler {
   states(
     state('disconnected, { 
       case ConnectedMessage => 'connected
@@ -54,7 +54,7 @@ class ServerHandshakeHandler(node : String, cookie : String) extends HandshakeHa
     val channel = ctx.getChannel
     val future = Channels.future(channel)
     challenge = random.nextInt
-    val msg = ChallengeMessage(5, DistributionFlags.default, challenge, node)
+    val msg = ChallengeMessage(5, DistributionFlags.default, challenge, node.name)
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
   

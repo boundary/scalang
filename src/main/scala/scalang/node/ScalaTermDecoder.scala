@@ -1,4 +1,4 @@
-package scalang.terms
+package scalang.node
 
 import org.jboss.netty
 import netty.handler.codec.oneone._
@@ -12,17 +12,45 @@ class ScalaTermDecoder extends OneToOneDecoder {
   
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
     val buffer = obj.asInstanceOf[ChannelBuffer]
-    readTerm(buffer).asInstanceOf[AnyRef]
+    readMessage(buffer)
+  }
+  
+  def readMessage(buffer : ChannelBuffer) : AnyRef = {
+    val t = buffer.readByte
+    if (t != 112) throw new DistributedProtocolException("Got message of type " + t)
+
+    val version = buffer.readByte
+    if (version != 131) throw new DistributedProtocolException("Version mismatch " + version)
+    readTerm(buffer) match {
+      case (1, from : Pid, to : Pid) =>
+        LinkMessage(from, to)
+      case (2, _, to : Pid) =>
+        buffer.skipBytes(1)
+        val msg = readTerm(buffer)
+        SendMessage(to, msg)
+      case (3, from : Pid, to : Pid, reason : Any) =>
+        ExitMessage(from, to, reason)
+      case (4, from : Pid, to : Pid) =>
+        UnlinkMessage(from, to)
+      case (5) =>
+        NodeLink()
+      case (6, from : Pid, _, to : Symbol) =>
+        buffer.skipBytes(1)
+        val msg = readTerm(buffer)
+        RegSend(from, to, msg)
+    }
   }
   
   def readTerm(buffer : ChannelBuffer) : Any = {
     buffer.readByte match {
+      case 131 => //version derp
+        readTerm(buffer)
       case 97 => //small integer
         buffer.readUnsignedByte
       case 98 => //integer
         buffer.readInt
       case 99 => //float string
-        val bytes = new Array[Byte](buffer.readableBytes)
+        val bytes = new Array[Byte](26)
         buffer.readBytes(bytes)
         val floatString = new String(bytes)
         floatString.toDouble

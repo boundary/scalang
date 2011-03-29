@@ -10,9 +10,11 @@ import scalang._
 
 class ScalaTermDecoder extends OneToOneDecoder {
   
-  def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
-    val buffer = obj.asInstanceOf[ChannelBuffer]
-    readMessage(buffer)
+  def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = obj match {
+    case buffer : ChannelBuffer =>
+      readMessage(buffer)
+    case _ =>
+      obj.asInstanceOf[AnyRef]
   }
   
   def readMessage(buffer : ChannelBuffer) : AnyRef = {

@@ -1,9 +1,21 @@
 package scalang.epmd
 
 import org.specs._
+import java.lang.{Process => SysProcess}
+import scalang._
 
 class EpmdSpec extends Specification {
   "Epmd" should {
+    var proc : SysProcess = null
+    doBefore {
+      proc = EpmdCmd()
+    }
+    
+    doAfter {
+      proc.destroy
+      proc.waitFor
+    }
+    
     "publish a port to a running epmd instance" in {
       val epmd = Epmd("localhost")
       val creation = epmd.alive(5480, "fuck@you.com")

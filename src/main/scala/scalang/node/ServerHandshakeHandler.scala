@@ -34,6 +34,7 @@ class ServerHandshakeHandler(node : Symbol, cookie : String) extends HandshakeHa
         verifyChallenge(msg)
         sendChallengeAck(msg)
         drainQueue
+        handshakeSucceeded
         'verified
     }),
     
@@ -41,7 +42,7 @@ class ServerHandshakeHandler(node : Symbol, cookie : String) extends HandshakeHa
 
   //state machine callbacks
   protected def receiveName(msg : NameMessage) {
-    peer = ErlangPeer(msg.name)
+    peer = Symbol(msg.name)
   }
   
   protected def sendStatus {

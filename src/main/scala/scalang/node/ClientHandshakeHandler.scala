@@ -15,7 +15,7 @@ import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 
-class ClientHandshakeHandler(name : String, cookie : String) extends HandshakeHandler {
+class ClientHandshakeHandler(name : Symbol, cookie : String) extends HandshakeHandler {
   states(
     state('disconnected, {
       case ConnectedMessage => 
@@ -31,7 +31,8 @@ class ClientHandshakeHandler(name : String, cookie : String) extends HandshakeHa
     }),
     
     state('status_ok, {
-      case ChallengeMessage(version, flags, c, _) =>
+      case ChallengeMessage(version, flags, c, name) =>
+        peer = Symbol(name)
         sendChallengeReply(c)
         'reply_sent
     }),
@@ -39,6 +40,8 @@ class ClientHandshakeHandler(name : String, cookie : String) extends HandshakeHa
     state('reply_sent, {
       case ChallengeAckMessage(digest) =>
         verifyChallengeAck(digest)
+        drainQueue
+        handshakeSucceeded
         'verified
     }),
     
@@ -49,7 +52,7 @@ class ClientHandshakeHandler(name : String, cookie : String) extends HandshakeHa
   protected def sendName {
     val channel = ctx.getChannel
     val future = Channels.future(channel)
-    val msg = NameMessage(5, DistributionFlags.default, name)
+    val msg = NameMessage(5, DistributionFlags.default, name.name)
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
     

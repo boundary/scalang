@@ -26,7 +26,7 @@ class ServerHandshakeHandlerSpec extends Specification {
       println("challenge " + challenge)
       val md5 = MessageDigest.getInstance("MD5")
       md5.update(cookie.getBytes)
-      md5.update(challenge.toString.getBytes)
+      md5.update(handshake.mask(challenge).toString.getBytes)
       val digest = md5.digest
       //we reuse the same challenge to make the test easier
       embedder.upstreamMessage(ChallengeReplyMessage(challenge, digest))

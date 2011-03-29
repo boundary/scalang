@@ -18,7 +18,7 @@ import java.security.{SecureRandom,MessageDigest}
 abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine with Log {
   override val start = 'disconnected
   @volatile var ctx : ChannelHandlerContext = null
-  @volatile var peer : ErlangPeer = null
+  @volatile var peer : Symbol = null
   @volatile var challenge : Int = 0
   @volatile var peerChallenge : Int = 0
   
@@ -51,7 +51,9 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
   }
   
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
-    error("Exception during erlang handshake.", e.getCause)
+    this.ctx = ctx
+    error("Exception caught during erlang handshake: ", e.getCause)
+    handshakeFailed
   }
   
   override def writeRequested(ctx : ChannelHandlerContext, e : MessageEvent) {
@@ -65,15 +67,19 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
   
   //utility methods
   protected def digest(challenge : Int, cookie : String) : Array[Byte] = {
-    val masked = if (challenge < 0) {
+    val masked = mask(challenge)
+    val md5 = MessageDigest.getInstance("MD5")
+    md5.update(cookie.getBytes)
+    md5.update(masked.toString.getBytes)
+    md5.digest
+  }
+  
+  def mask(challenge : Int) : Long = {
+    if (challenge < 0) {
       (1L << 31) | (challenge & 0x7FFFFFFFL)
     } else {
       challenge.toLong
     }
-    val md5 = MessageDigest.getInstance("MD5")
-    md5.update(cookie.getBytes)
-    md5.update(challenge.toString.getBytes)
-    md5.digest
   }
   
   protected def digestEquals(a : Array[Byte], b : Array[Byte]) : Boolean = {
@@ -102,11 +108,13 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
   }
   
   protected def handshakeSucceeded {
-    ctx.getChannel.close
-    ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeFailed, null))
+    println("suceeded")
+    ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeSucceeded(peer, ctx.getChannel), null))
   }
   
   protected def handshakeFailed {
-    ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeSucceeded, null))
+    println("failied")
+    ctx.getChannel.close
+    ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeFailed(peer), null))
   }
 }

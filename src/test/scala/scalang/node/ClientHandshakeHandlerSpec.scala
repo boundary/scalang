@@ -10,7 +10,7 @@ import java.security.MessageDigest
 
 class ClientHandshakeHandlerSpec extends Specification {
   val cookie = "DRSJLFJLGIYPEAVFYFCY"
-  val node = "tmp@moonpolysoft.local"
+  val node = Symbol("tmp@moonpolysoft.local")
   
   "ClientHandshakeHandler" should {
     "complete a standard handshake" in {
@@ -31,7 +31,7 @@ class ClientHandshakeHandlerSpec extends Specification {
       }
       val md5 = MessageDigest.getInstance("MD5")
       md5.update(cookie.getBytes)
-      md5.update(challenge.toString.getBytes)
+      md5.update(handshake.mask(challenge).toString.getBytes)
       embedder.upstreamMessage(ChallengeAckMessage(md5.digest))
       handshake.isVerified must ==(true)
     }

@@ -1,0 +1,216 @@
+package scalang.node
+
+import org.jboss.netty
+import netty.handler.codec.oneone._
+import netty.channel._
+import java.nio._
+import java.math.BigInteger
+import netty.buffer._
+import scala.annotation.tailrec
+import scalang._
+import java.util.{Formatter, Locale}
+import scalang.util.ByteArray
+import scalang.util.CamelToUnder._
+
+class ScalaTermEncoder extends OneToOneEncoder {
+  
+  override def encode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
+    val buffer = ChannelBuffers.dynamicBuffer(512)
+    //write distribution header
+    buffer.writeBytes(ByteArray(112,131))
+    obj match {
+      case LinkMessage(from, to) =>
+        encodeObject(buffer, (1, from, to))
+      case SendMessage(to, msg) =>
+        encodeObject(buffer, (2, Symbol(""), to))
+        buffer.writeByte(131)
+        encodeObject(buffer, msg)
+      case ExitMessage(from, to, reason) =>
+        encodeObject(buffer, (3, from, to, reason))
+      case UnlinkMessage(from, to) =>
+        encodeObject(buffer, (4, from, to))
+      case NodeLink() =>
+        encodeObject(buffer, (5))
+      case RegSend(from, to, msg) =>
+        encodeObject(buffer, (6, from, Symbol(""), to))
+        buffer.writeByte(131)
+        encodeObject(buffer, msg)
+    }
+    
+    
+    buffer
+  }
+  
+  def encodeObject(buffer : ChannelBuffer, obj : Any) : Unit = obj match {
+    case i : Int if i >= 0 && i <= 255 => 
+      writeSmallInteger(buffer, i)
+    case i : Int =>
+      writeInteger(buffer, i)
+    case l : Long =>
+      writeLong(buffer, l)
+    case d : Double =>
+      writeStringFloat(buffer, d)
+    case s : Symbol =>
+      writeAtom(buffer, s)
+    case Reference(node, id, creation) => //we only emit new references
+      buffer.writeByte(114)
+      buffer.writeShort(id.length)
+      writeAtom(buffer, node)
+      buffer.writeByte(creation)
+      for (i <- id) {
+        buffer.writeInt(i)
+      }
+    case Port(node, id, creation) =>
+      buffer.writeByte(102)
+      writeAtom(buffer, node)
+      buffer.writeInt(id)
+      buffer.writeByte(creation)
+    case Pid(node, id, serial, creation) =>
+      buffer.writeByte(103)
+      writeAtom(buffer, node)
+      buffer.writeInt(id)
+      buffer.writeInt(serial)
+      buffer.writeByte(creation)
+    case Fun(pid, module, index, uniq, vars) =>
+      buffer.writeByte(117)
+      buffer.writeInt(vars.length)
+      encodeObject(buffer, pid)
+      writeAtom(buffer, module)
+      encodeObject(buffer, index)
+      encodeObject(buffer, uniq)
+      for (v <- vars) {
+        encodeObject(buffer, v)
+      }
+    case s : String =>
+      buffer.writeByte(107)
+      val bytes = s.getBytes
+      buffer.writeShort(bytes.length)
+      buffer.writeBytes(bytes)
+    case ImproperList(list, tail) =>
+      writeList(buffer, list, tail)
+    case Nil =>
+      buffer.writeByte(106)
+    case l : List[Any] =>
+      writeList(buffer, l, Nil)
+    case b : BigInteger =>
+      writeBigInt(buffer, b)
+    case a : Array[Byte] =>
+      writeBinary(buffer, a)
+    case b : BigTuple =>
+      writeBigTuple(buffer, b)
+    case p : Product =>
+      writeProduct(buffer, p)
+  }
+  
+  def writeByteBuffer(buffer : ChannelBuffer, b : ByteBuffer) {
+    val length = b.remaining
+    buffer.writeByte(109)
+    buffer.writeInt(length)
+    buffer.writeBytes(b)
+  }
+  
+  def writeBinary(buffer : ChannelBuffer, a : Array[Byte]) {
+    val length = a.length
+    buffer.writeByte(109)
+    buffer.writeInt(length)
+    buffer.writeBytes(a)
+  }
+  
+  def writeLong(buffer : ChannelBuffer, l : Long) {
+    val sign = if (l < 0) 1 else 0
+    val bytes = ByteBuffer.allocate(8)
+    bytes.order(ByteOrder.LITTLE_ENDIAN)
+    bytes.putLong(l)
+    buffer.writeByte(110)
+    buffer.writeByte(8)
+    buffer.writeByte(sign)
+    bytes.flip
+    buffer.writeBytes(bytes)
+  }
+  
+  def writeBigInt(buffer : ChannelBuffer, big : BigInteger) {
+    val bytes = big.toByteArray
+    val sign = if (big.signum < 0) 1 else 0
+    val length = bytes.length
+    if (length < 255) {
+      buffer.writeByte(110)
+      buffer.writeByte(length)
+    } else {
+      buffer.writeByte(111)
+      buffer.writeInt(length)
+    }
+    buffer.writeByte(sign)
+    for (i <- (1 to length)) {
+      buffer.writeByte(bytes(length - i))
+    }
+  }
+  
+  def writeList(buffer : ChannelBuffer, list : List[Any], tail : Any) {
+    buffer.writeByte(108)
+    buffer.writeInt(list.size)
+    for (element <- list) {
+      encodeObject(buffer, element)
+    }
+    encodeObject(buffer, tail)
+  }
+  
+  def writeAtom(buffer : ChannelBuffer, s : Symbol) {
+    buffer.writeByte(100)
+    val bytes = s.name.getBytes
+    buffer.writeShort(bytes.length)
+    buffer.writeBytes(bytes)
+  }
+  
+  def writeSmallInteger(buffer : ChannelBuffer, i : Int) {
+    buffer.writeByte(97)
+    buffer.writeByte(i)
+  }
+  
+  def writeInteger(buffer : ChannelBuffer, i : Int) {
+    buffer.writeByte(98)
+    buffer.writeInt(i)
+  }
+  
+  def writeStringFloat(buffer : ChannelBuffer, d : Double) {
+    val formatter = new Formatter
+    formatter.format("%.20e", d.asInstanceOf[AnyRef])
+    val str = formatter.toString.getBytes
+    buffer.writeByte(99)
+    buffer.writeBytes(str)
+  }
+  
+  def writeProduct(buffer : ChannelBuffer, p : Product) {
+    val name = p.productPrefix
+    if (name.startsWith("Tuple")) {
+      writeTuple(buffer, None, p)
+    } else {
+      writeTuple(buffer, Some(name.camelToUnderscore), p)
+    }
+  }
+  
+  def writeTuple(buffer : ChannelBuffer, tag : Option[String], p : Product) {
+    val length = tag.size + p.productArity
+    buffer.writeByte(104)
+    buffer.writeByte(length)
+    for (t <- tag) {
+      writeAtom(buffer, Symbol(t))
+    }
+    for (element <- p.productIterator) {
+      encodeObject(buffer, element)
+    }
+  }
+  
+  def writeBigTuple(buffer : ChannelBuffer, tuple : BigTuple) {
+    val length = tuple.productArity
+    if (length < 255) {
+      buffer.writeByte(104)
+      buffer.writeByte(length)
+    } else {
+      buffer.writeByte(105)
+      buffer.writeInt(length)
+    }
+    for (element <- tuple.productIterator) {
+      encodeObject(buffer, element)
+    }
+  }
+}

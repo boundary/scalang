@@ -41,7 +41,7 @@ trait StateMachine {
     }
   }
   
-  class UnexpectedEventException(msg : String) extends Exception
+  class UnexpectedEventException(msg : String) extends Exception(msg)
   
-  class UndefinedStateException(msg : String) extends Exception
+  class UndefinedStateException(msg : String) extends Exception(msg)
 }

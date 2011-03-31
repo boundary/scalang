@@ -20,23 +20,21 @@ class ErlangHandler(node : ErlangNode) extends SimpleChannelUpstreamHandler {
       case HandshakeFailed(name) =>
         //not much we can do here?
       case HandshakeSucceeded(name, channel) =>
+/*        println("registering connection to " + name)*/
         peer = name
         node.registerConnection(name, channel)
       case LinkMessage(from, to) =>
         node.link(from, to)
       case SendMessage(to, msg) =>
-        node.deliver(to, msg)
+        node.handleSend(to, msg)
       case ExitMessage(from, to, reason) =>
-        node.deliverExit(from, to, reason)
+        node.break(from, to, reason)
       case Exit2Message(from, to, reason) =>
-        node.deliverExit(from, to, reason)
+        node.break(from, to, reason)
       case UnlinkMessage(from, to) =>
         node.unlink(from, to)
-      case NodeLink() =>
-        //not really sure what to do with this
-        Unit
       case RegSend(from, to, msg) =>
-        node.deliver(to, msg)
+        node.handleSend(to, msg)
     }
   }
   

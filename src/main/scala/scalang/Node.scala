@@ -26,9 +26,10 @@ object Node {
 trait Node {
   def name : Symbol
   def cookie : String
-  def spawn(process : Process) : Pid
-  def spawn(regName : String, process : Process) : Pid
-  def spawn(regName : Symbol, process : Process) : Pid
+  def spawn[T <: Process](implicit mf : Manifest[T]) : Pid
+  def spawn[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid
+  def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid
+  def spawnMbox : Mailbox
   def register(regName : String, pid : Pid)
   def register(regName : Symbol, pid : Pid)
   def getNames : Set[Symbol]
@@ -37,9 +38,9 @@ trait Node {
   def nodes : Set[Symbol]
 }
 
-class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log {
+class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log with ExitListener with SendListener with LinkListener {
   var creation : Int = 0
-  val processes = new NonBlockingHashMap[Pid,ProcessFiber]
+  val processes = new NonBlockingHashMap[Pid,ProcessLike]
   val registeredNames = new NonBlockingHashMap[Symbol,Pid]
   val channels = new NonBlockingHashMap[Symbol,Channel]
   val pidCount = new AtomicInteger(0)
@@ -53,7 +54,12 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log {
     case None => throw new ErlangNodeException("EPMD alive announcement failed.")
   }
   
-  
+  def spawnMbox : Mailbox = {
+    val pid = createPid
+    val box = new Mailbox(pid)
+    processes.put(pid, box)
+    box
+  }
   
   def createPid : Pid = {
     val id = pidCount.getAndIncrement
@@ -62,43 +68,37 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log {
   }
   
   //node external interface
-  def spawn(process : Process) : Pid = {
+  def spawn[T <: Process](implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
+    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid)
     val fiber = factory.create
-    process.addExitListener(new ExitListener {
-      def handleExit(from : Pid, reason : Any) {
-        
-      }
-    })
-    
-    process.addSendListener(new SendListener {
-      def handleSend(to : Pid, msg : Any) {
-        
-      }
-      
-      def handleSend(to : Symbol, msg : Any) {
-        
-      }
-      
-      def handleSend(to : (Symbol,Symbol), msg : Any) {
-        
-      }
-    })
-    val procFiber = new ProcessFiber(process, fiber, pid)
+    process.addExitListener(this)
+    process.addSendListener(this)
+    process.addLinkListener(this)
+    val procFiber = new ProcessFiber(process, fiber)
     processes.put(pid, procFiber)
     pid
   }
   
-  def spawn(regName : Symbol, process : Process) : Pid = {
+  def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
+    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid)
     val fiber = factory.create
-    val procFiber = new ProcessFiber(process, fiber, pid)
+    process.addExitListener(this)
+    process.addSendListener(this)
+    process.addLinkListener(this)
+    val procFiber = new ProcessFiber(process, fiber)
     processes.put(pid, procFiber)
     registeredNames.put(regName, pid)
   }
   
-  def spawn(regName : String, process : Process) : Pid = {
-    spawn(Symbol(regName), process)
+  def spawn[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid = {
+    spawn(Symbol(regName))(mf)
+  }
+  
+  protected def createProcess[T <: Process](clazz : Class[T], pid : Pid) : Process = {
+    val constructor = clazz.getConstructor(classOf[Pid])
+    constructor.newInstance(pid)
   }
   
   def register(regName : String, pid : Pid) {
@@ -141,49 +141,50 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log {
     }
     
     for(p <- process(from)) {
-      p.process.link(to)
+      p.link(to)
     }
     
     for(p <- process(to)) {
-      p.process.link(from)
+      p.link(from)
     }
   }
   
-  def deliver(to : Pid, msg : Any) {
+  def handleSend(to : Pid, msg : Any) {
     val process = processes.get(to)
     if (process != null) {
-      process.deliverMessage(msg)
+      process.handleMessage(msg)
     }
   }
   
-  def deliver(to : Symbol, msg : Any) {
+  def handleSend(to : Symbol, msg : Any) {
     for (pid <- whereis(to)) {
-      deliver(pid, msg)
+      handleSend(pid, msg)
     }
   }
   
-  def deliver(dest : (Symbol,Symbol), msg : Any) {
+  def handleSend(dest : (Symbol,Symbol), msg : Any) {
     
   }
   
-  def deliverExit(from : Pid, to : Pid, reason : Any) {
-    val process = processes.get(to)
-    if (process != null) {
-      process.deliverExit(from, reason)
-    }
+  def handleExit(from : Pid, reason : Any) {
+    
   }
   
-  def process(pid : Pid) : Option[ProcessFiber] = {
+  def break(from : Pid, to : Pid, reason : Any) {
+    
+  }
+  
+  def process(pid : Pid) : Option[ProcessLike] = {
     Option(processes.get(pid))
   }
   
   def unlink(from : Pid, to : Pid) {
     for (p <- process(from)) {
-      p.process.unlink(to)
+      p.unlink(to)
     }
     
     for (p <- process(to)) {
-      p.process.unlink(from)
+      p.unlink(from)
     }
   }
   
@@ -197,7 +198,9 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log {
   
   def connectAndSend(peer : Symbol, msg : Option[Any] = None) {
     val hostname = splitHostname(peer).getOrElse(throw new ErlangNodeException("Cannot resolve peer with no hostname: " + peer.name))
-    val port = Epmd(hostname).lookupPort(peer.name).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
+    val peerName = splitNodename(peer)
+/*    println("peer name " + peerName)*/
+    val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
     val client = new ErlangNodeClient(this, hostname, port, msg)
   }
   

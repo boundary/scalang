@@ -58,6 +58,7 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
   
   override def writeRequested(ctx : ChannelHandlerContext, e : MessageEvent) {
     this.ctx = ctx
+/*    println("write requested: " + e)*/
     if (isVerified) {
       super.writeRequested(ctx,e)
     } else {
@@ -95,25 +96,25 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
   }
   
   protected def drainQueue {
-    for (msg <- messages) {
-      ctx.sendDownstream(msg)
-    }
-    messages.clear
-    
     val p = ctx.getPipeline
     val keys = p.toMap.keySet
     for (name <- List("handshakeFramer", "handshakeDecoder", "handshakeEncoder", "handshakeHandler"); if keys.contains(name)) {
       p.remove(name)
     }
+    for (msg <- messages) {
+/*      println("sending " + msg + " downstream")*/
+      ctx.sendDownstream(msg)
+    }
+    messages.clear
   }
   
   protected def handshakeSucceeded {
-    println("suceeded")
+/*    println("suceeded")*/
     ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeSucceeded(peer, ctx.getChannel), null))
   }
   
   protected def handshakeFailed {
-    println("failied")
+/*    println("failied")*/
     ctx.getChannel.close
     ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeFailed(peer), null))
   }

@@ -16,7 +16,7 @@ class EpmdDecoder extends FrameDecoder {
       case 121 => //decode alive2 resp
         if (buffer.readableBytes < 4) return null
         val result = buffer.getByte(1)
-        val creation = buffer.getShort(2)
+        val creation = buffer.getUnsignedShort(2)
         buffer.skipBytes(4)
         AliveResp(result, creation)
       case 119 => //decode port2 resp
@@ -26,11 +26,11 @@ class EpmdDecoder extends FrameDecoder {
           PortPleaseError(result)
         } else {
           if (buffer.readableBytes < 12) return null
-          val nlen = buffer.getShort(10)
+          val nlen = buffer.getUnsignedShort(10)
           if (buffer.readableBytes < (14 + nlen)) return null
-          val elen = buffer.getShort(12 + nlen)
+          val elen = buffer.getUnsignedShort(12 + nlen)
           if (buffer.readableBytes < (14 + nlen + elen)) return null
-          val portNo = buffer.getShort(2)
+          val portNo = buffer.getUnsignedShort(2)
           val bytes = new Array[Byte](nlen)
           buffer.getBytes(12, bytes)
           val nodeName = new String(bytes)

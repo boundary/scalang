@@ -1,7 +1,7 @@
-package scalang.node
+package scalang
 
 import org.specs._
-import scalang._
+import scalang.node._
 import java.lang.{Process => JProc}
 import java.io._
 import scala.collection.JavaConversions._
@@ -23,7 +23,7 @@ class NodeSpec extends Specification {
       }
     }
     
-    val cookie = "derp"
+    val cookie = "test"
     
     "get connections from a remote node" in {
       val node = new ErlangNode(Symbol("test@localhost"), cookie)
@@ -31,6 +31,18 @@ class NodeSpec extends Specification {
       val read = new BufferedReader(new InputStreamReader(erl.getInputStream))
       println(read.readLine)
       node.channels.keySet.toSet must contain(Symbol("tmp@localhost"))
+    }
+    
+    "connect to a remote node" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      erl = Escript("receive_connection.escript")
+      ReadLine(erl) //ready
+      val pid = node.createPid
+      node.connectAndSend(Symbol("test@localhost"), None)
+      val result = ReadLine(erl)
+      result must ==("scala@localhost")
+      Thread.sleep(1000)
+      node.channels.keySet.toSet must contain(Symbol("test@localhost"))
     }
   }
 }

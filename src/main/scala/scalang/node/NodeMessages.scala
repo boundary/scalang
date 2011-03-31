@@ -12,9 +12,11 @@ case class Exit2Message(from : Pid, to : Pid, reason : Any)
 
 case class UnlinkMessage(from : Pid, to : Pid)
 
-case class NodeLink()
-
 case class RegSend(from : Pid, to : Symbol, msg : Any)
+
+case object Tick
+
+case object Tock
 
 //must implement trace tags later
 

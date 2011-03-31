@@ -14,6 +14,11 @@ class ErlangHandler(node : ErlangNode) extends SimpleChannelUpstreamHandler {
   
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
     e.getMessage match {
+      case Tick =>
+/*        println("got tick")*/
+        ctx.getChannel.write(Tock) //channel heartbeat for erlang
+      case HandshakeFailed(name) =>
+        //not much we can do here?
       case HandshakeSucceeded(name, channel) =>
         peer = name
         node.registerConnection(name, channel)

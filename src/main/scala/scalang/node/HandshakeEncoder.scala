@@ -53,6 +53,8 @@ class HandshakeEncoder extends OneToOneEncoder {
         buffer.writeByte(97)
         buffer.writeBytes(digest)
         buffer
+      case buffer : ChannelBuffer => //we have yet to be removed from the conn
+        buffer
     }
   }
   

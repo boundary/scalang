@@ -18,7 +18,10 @@ class ScalaTermEncoder extends OneToOneEncoder {
     val buffer = ChannelBuffers.dynamicBuffer(512)
     //write distribution header
     buffer.writeBytes(ByteArray(112,131))
+/*    println("sending obj " + obj)*/
     obj match {
+      case Tock =>
+        buffer.clear
       case LinkMessage(from, to) =>
         encodeObject(buffer, (1, from, to))
       case SendMessage(to, msg) =>
@@ -29,15 +32,13 @@ class ScalaTermEncoder extends OneToOneEncoder {
         encodeObject(buffer, (3, from, to, reason))
       case UnlinkMessage(from, to) =>
         encodeObject(buffer, (4, from, to))
-      case NodeLink() =>
-        encodeObject(buffer, (5))
       case RegSend(from, to, msg) =>
         encodeObject(buffer, (6, from, Symbol(""), to))
         buffer.writeByte(131)
         encodeObject(buffer, msg)
     }
     
-    
+/*    println("sending " + buffer)*/
     buffer
   }
   

@@ -12,12 +12,17 @@ class ScalaTermDecoder extends OneToOneDecoder {
   
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = obj match {
     case buffer : ChannelBuffer =>
-      readMessage(buffer)
+      if (buffer.readableBytes > 0) {
+        readMessage(buffer)
+      } else {
+        Tick
+      }
     case _ =>
       obj.asInstanceOf[AnyRef]
   }
   
   def readMessage(buffer : ChannelBuffer) : AnyRef = {
+/*    println("buffer " + buffer)*/
     val t = buffer.readByte
     if (t != 112) throw new DistributedProtocolException("Got message of type " + t)
 
@@ -34,8 +39,6 @@ class ScalaTermDecoder extends OneToOneDecoder {
         ExitMessage(from, to, reason)
       case (4, from : Pid, to : Pid) =>
         UnlinkMessage(from, to)
-      case (5) =>
-        NodeLink()
       case (6, from : Pid, _, to : Symbol) =>
         buffer.skipBytes(1)
         val msg = readTerm(buffer)

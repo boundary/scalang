@@ -9,6 +9,8 @@ class ProcessFiber(val process : ProcessLike, val fiber : Fiber) extends Process
   
   override def self = process.self
   
+  override def referenceCounter = process.referenceCounter
+  
   override def handleMessage(msg : Any) {
     msgChannel.publish(msg)
   }
@@ -31,7 +33,7 @@ class ProcessFiber(val process : ProcessLike, val fiber : Fiber) extends Process
   
   override def notifySend(name : Symbol, msg : Any) = process.notifySend(name, msg)
   
-  override def notifySend(dest : (Symbol,Symbol), msg : Any) = process.notifySend(dest, msg)
+  override def notifySend(dest : (Symbol,Symbol), from : Pid, msg : Any) = process.notifySend(dest, from, msg)
   
   override def addLinkListener(listener : LinkListener) = process.addLinkListener(listener)
   

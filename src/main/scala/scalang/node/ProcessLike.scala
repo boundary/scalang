@@ -7,10 +7,16 @@ import scala.collection.JavaConversions._
 trait ProcessLike extends ExitListenable with SendListenable with LinkListenable {
   def self : Pid
   
+  def referenceCounter : ReferenceCounter
+  
   def handleMessage(msg : Any)
   
   def handleExit(from : Pid, reason : Any) {
     exit(reason)
+  }
+  
+  def makeRef : Reference = {
+    referenceCounter.makeRef
   }
   
   def exit(reason : Any) {

@@ -58,9 +58,14 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   val netKernel = spawn[NetKernel]('net_kernel)
   
   def spawnMbox : Mailbox = {
-    val pid = createPid
-    val box = new Mailbox(pid)
-    processes.put(pid, box)
+    val p = createPid
+    val n = this
+    val box = new Mailbox(new ProcessContext {
+      val pid = p
+      val referenceCounter = n.referenceCounter
+      val node = n
+    })
+    processes.put(p, box)
     box
   }
   
@@ -80,6 +85,7 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     process.addLinkListener(this)
     val procFiber = new ProcessFiber(process, fiber)
     processes.put(pid, procFiber)
+    fiber.start
     pid
   }
   
@@ -93,15 +99,23 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     val procFiber = new ProcessFiber(process, fiber)
     processes.put(pid, procFiber)
     registeredNames.put(regName, pid)
+    fiber.start
+    pid
   }
   
   def spawn[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid = {
     spawn(Symbol(regName))(mf)
   }
   
-  protected def createProcess[T <: Process](clazz : Class[T], pid : Pid) : Process = {
-    val constructor = clazz.getConstructor(classOf[Pid])
-    constructor.newInstance(pid)
+  protected def createProcess[T <: Process](clazz : Class[T], p : Pid) : Process = {
+    val constructor = clazz.getConstructor(classOf[ProcessContext])
+    val n = this
+    val ctx = new ProcessContext {
+      def pid = p
+      def referenceCounter = n.referenceCounter
+      def node = n
+    }
+    constructor.newInstance(ctx)
   }
   
   def register(regName : String, pid : Pid) {
@@ -153,9 +167,13 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   
   def handleSend(to : Pid, msg : Any) {
-    val process = processes.get(to)
-    if (process != null) {
-      process.handleMessage(msg)
+    if (isLocal(to)) {
+      val process = processes.get(to)
+      if (process != null) {
+        process.handleMessage(msg)
+      }
+    } else {
+      getOrConnectAndSend(to.node, SendMessage(to, msg))
     }
   }
   
@@ -202,6 +220,13 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   
   def disconnected(peer : Symbol) {
     channels.remove(peer)
+  }
+  
+  def getOrConnectAndSend(peer : Symbol, msg : Any) {
+    Option(channels.get(peer)) match {
+      case Some(channel) => channel.write(msg)
+      case None => connectAndSend(peer, Some(msg))
+    }
   }
   
   def connectAndSend(peer : Symbol, msg : Option[Any] = None) {

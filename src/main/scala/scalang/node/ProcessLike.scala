@@ -11,6 +11,10 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
   
   def handleMessage(msg : Any)
   
+  def send(pid : Pid, msg : Any) = notifySend(pid,msg)
+  def send(name : Symbol, msg : Any) = notifySend(name,msg)
+  def send(dest : (Symbol,Symbol), from : Pid, msg : Any) = notifySend(dest,from,msg)
+  
   def handleExit(from : Pid, reason : Any) {
     exit(reason)
   }

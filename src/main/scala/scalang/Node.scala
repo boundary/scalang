@@ -34,7 +34,7 @@ trait Node {
   def register(regName : Symbol, pid : Pid)
   def getNames : Set[Symbol]
   def whereis(name : Symbol) : Option[Pid]
-  def ping(node : Symbol, timeout : Long)
+  def ping(node : Symbol, timeout : Long) : Boolean
   def nodes : Set[Symbol]
   def makeRef : Reference
 }
@@ -65,6 +65,9 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
       val referenceCounter = n.referenceCounter
       val node = n
     })
+    box.addExitListener(this)
+    box.addSendListener(this)
+    box.addLinkListener(this)
     processes.put(p, box)
     box
   }
@@ -138,8 +141,18 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     Option(registeredNames.get(regName))
   }
   
-  def ping(node : Symbol, timeout : Long) {
-    
+  def ping(node : Symbol, timeout : Long) : Boolean = {
+    val mbox = spawnMbox
+    val ref = makeRef
+    mbox.send('net_kernel, (Symbol("$gen_call"), (mbox.self, ref), ('is_auth, name)))
+    val result = mbox.receive(timeout) match {
+      case (ref, 'yes) => true
+      case m => 
+        println("msg " + m)
+        false
+    }
+    mbox.exit('normal)
+    result
   }
   
   def nodes : Set[Symbol] = {

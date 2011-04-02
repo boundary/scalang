@@ -51,5 +51,12 @@ class NodeSpec extends Specification {
       result must ==("pong")
       node.channels.keySet.toSet must contain(Symbol("tmp@localhost"))
     }
+    
+    "send pings" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      erl = Escript("receive_connection.escript")
+      ReadLine(erl)
+      node.ping(Symbol("test@localhost"), 1000) must ==(true)
+    }
   }
 }

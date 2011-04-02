@@ -26,7 +26,7 @@ class ScalaTermDecoder extends OneToOneDecoder {
     val t = buffer.readByte
     if (t != 112) throw new DistributedProtocolException("Got message of type " + t)
 
-    val version = buffer.readByte
+    val version = buffer.readUnsignedByte
     if (version != 131) throw new DistributedProtocolException("Version mismatch " + version)
     readTerm(buffer) match {
       case (1, from : Pid, to : Pid) =>

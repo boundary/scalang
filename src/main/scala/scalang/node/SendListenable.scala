@@ -21,9 +21,9 @@ trait SendListenable {
     }
   }
   
-  def notifySend(dest : (Symbol,Symbol), msg : Any) : Any = {
+  def notifySend(dest : (Symbol,Symbol), from : Pid, msg : Any) : Any = {
     for (l <- sendListeners) {
-      l.handleSend(dest, msg)
+      l.handleSend(dest, from, msg)
     }
   }
   

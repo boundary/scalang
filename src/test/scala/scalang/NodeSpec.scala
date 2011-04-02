@@ -41,8 +41,15 @@ class NodeSpec extends Specification {
       node.connectAndSend(Symbol("test@localhost"), None)
       val result = ReadLine(erl)
       result must ==("scala@localhost")
-      Thread.sleep(1000)
       node.channels.keySet.toSet must contain(Symbol("test@localhost"))
+    }
+    
+    "accept pings" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_adm:ping('scala@localhost')])."))
+      val result = ReadLine(erl)
+      result must ==("pong")
+      node.channels.keySet.toSet must contain(Symbol("tmp@localhost"))
     }
   }
 }

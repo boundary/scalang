@@ -37,6 +37,7 @@ trait Node {
   def ping(node : Symbol, timeout : Long) : Boolean
   def nodes : Set[Symbol]
   def makeRef : Reference
+  def isAlive(pid : Pid) : Boolean
 }
 
 class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log with ExitListener with SendListener with LinkListener {
@@ -159,6 +160,21 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     channels.keySet.toSet.asInstanceOf[Set[Symbol]]
   }
   
+  def deliverLink(from : Pid, to : Pid) {
+    if (from == to) {
+      warn("Trying to link a pid to itself: " + from)
+      return
+    }
+    
+    if (isLocal(to)) {
+      for (p <- process(to)) {
+        p.linkWithoutNotify(from)
+      }
+    } else {
+      getOrConnectAndSend(to.node, LinkMessage(from, to))
+    }
+  }
+  
   //node internal interface
   def link(from : Pid, to : Pid) {
     if (from == to) {
@@ -178,6 +194,10 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
       p.link(from)
     }
   }
+  
+  def send(to : Pid, msg : Any) = handleSend(to, msg)
+  def send(to : Symbol, msg : Any) = handleSend(to, msg)
+  def send(to : (Symbol,Symbol), from : Pid, msg : Any) = handleSend(to, from, msg)
   
   def handleSend(to : Pid, msg : Any) {
     if (isLocal(to)) {
@@ -206,8 +226,10 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   
   def handleExit(from : Pid, reason : Any) {
+    println("handleExit " + from + " processes " + processes)
     Option(processes.get(from)) match {
       case Some(pf : ProcessFiber) =>
+        println("disposing of fiber " + pf)
         val fiber = pf.fiber
         fiber.dispose
       case _ =>
@@ -217,8 +239,9 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   
   def break(from : Pid, to : Pid, reason : Any) {
+    println("break(" + from + ", " + to + ", " + reason + ")")
     if (isLocal(to)) {
-      for (proc <- Some(processes.get(to))) {
+      for (proc <- process(to)) {
         proc.handleExit(from, reason)
       }
     } else {
@@ -278,6 +301,13 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
       None
     } else {
       Some(parts(1))
+    }
+  }
+  
+  def isAlive(pid : Pid) : Boolean = {
+    process(pid) match {
+      case Some(_) => true
+      case None => false
     }
   }
 }

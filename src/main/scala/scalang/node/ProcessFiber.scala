@@ -19,6 +19,8 @@ class ProcessFiber(val process : ProcessLike, val fiber : Fiber) extends Process
     exitChannel.publish((from, msg))
   }
   
+  override def linkWithoutNotify(to : Pid) = process.linkWithoutNotify(to)
+  
   override def link(to : Pid) = process.link(to)
   
   override def unlink(to : Pid) = process.unlink(to)

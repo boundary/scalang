@@ -14,4 +14,10 @@ trait LinkListenable {
       listener.break(from, to, reason)
     }
   }
+  
+  def notifyDeliverLink(from : Pid, to : Pid) {
+    for (listener <- linkListeners) {
+      listener.deliverLink(from, to)
+    }
+  }
 }

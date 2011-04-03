@@ -5,6 +5,7 @@ import org.cliffc.high_scale_lib.NonBlockingHashSet
 import scala.collection.JavaConversions._
 
 trait ProcessLike extends ExitListenable with SendListenable with LinkListenable {
+  @volatile var state = 'alive
   def self : Pid
   
   def referenceCounter : ReferenceCounter
@@ -24,6 +25,9 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
   }
   
   def exit(reason : Any) {
+    if (state != 'alive) return
+    state = 'dead
+    println("exit " + reason + " links " + links + " exits " + exitListeners + " this " + this)
     for (link <- links) {
       link.break(reason)
     }
@@ -35,11 +39,20 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
   val links = new NonBlockingHashSet[Link]
   
   def link(to : Pid) {
+    linkWithoutNotify(to)
+    for (listener <- linkListeners) {
+      listener.deliverLink(self, to)
+    }
+  }
+  
+  def linkWithoutNotify(to : Pid) {
     val l = Link(self, to)
     for (listener <- linkListeners) {
       l.addLinkListener(listener)
     }
+    println("adding link " + l + " to " + this)
     links.add(l)
+    println("links " + links)
   }
   
   def unlink(to : Pid) {

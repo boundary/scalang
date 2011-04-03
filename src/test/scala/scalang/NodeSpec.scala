@@ -67,5 +67,19 @@ class NodeSpec extends Specification {
       Thread.sleep(100)
       Option(node.processes.get(pid)) must beNone
     }
+    
+    "deliver local breakages" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      val linkProc = node.spawn[LinkProcess]
+      val failProc = node.spawn[FailProcess]
+      val mbox = node.spawnMbox
+      node.send(linkProc, (failProc, mbox.self))
+      Thread.sleep(100)
+      mbox.receive must ==('ok)
+      node.send(failProc, 'fail)
+      Thread.sleep(100)
+      node.isAlive(failProc) must ==(false)
+      node.isAlive(linkProc) must ==(false)
+    }
   }
 }

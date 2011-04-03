@@ -58,5 +58,14 @@ class NodeSpec extends Specification {
       ReadLine(erl)
       node.ping(Symbol("test@localhost"), 1000) must ==(true)
     }
+    
+    "remove processes on exit" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      val pid = node.spawn[FailProcess]
+      node.processes.get(pid) must beLike { case f : ProcessFiber => true }
+      node.handleSend(pid, 'bah)
+      Thread.sleep(100)
+      Option(node.processes.get(pid)) must beNone
+    }
   }
 }

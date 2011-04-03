@@ -206,11 +206,24 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   
   def handleExit(from : Pid, reason : Any) {
-    
+    Option(processes.get(from)) match {
+      case Some(pf : ProcessFiber) =>
+        val fiber = pf.fiber
+        fiber.dispose
+      case _ =>
+        Unit
+    }
+    processes.remove(from)
   }
   
   def break(from : Pid, to : Pid, reason : Any) {
-    
+    if (isLocal(to)) {
+      for (proc <- Some(processes.get(to))) {
+        proc.handleExit(from, reason)
+      }
+    } else {
+      getOrConnectAndSend(to.node, ExitMessage(from,to,reason))
+    }
   }
   
   def process(pid : Pid) : Option[ProcessLike] = {

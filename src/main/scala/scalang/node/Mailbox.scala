@@ -15,14 +15,6 @@ class Mailbox(ctx : ProcessContext) extends ProcessLike {
     queue.put(msg)
   }
   
-  override def handleExit(from : Pid, msg : Any) {
-    
-  }
-  
-  override def exit(reason : Any) = {
-    
-  }
-  
   def receive : Any = {
     queue.poll
   }

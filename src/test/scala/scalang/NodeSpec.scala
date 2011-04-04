@@ -59,6 +59,32 @@ class NodeSpec extends Specification {
       node.ping(Symbol("test@localhost"), 1000) must ==(true)
     }
     
+    "send local regname" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      val echoPid = node.spawn[EchoProcess]('echo)
+      val mbox = node.spawnMbox
+      node.send('echo, (mbox.self, 'blah))
+      mbox.receive must ==('blah)
+    }
+    
+    "send remote regname" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      erl = Escript("echo.escript")
+      ReadLine(erl)
+      val mbox = node.spawnMbox
+      node.send(('echo, Symbol("test@localhost")), mbox.self, (mbox.self, 'blah))
+      mbox.receive must ==('blah)
+    }
+    
+    "receive remove regname" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      erl = Escript("echo.escript")
+      ReadLine(erl)
+      val mbox = node.spawnMbox("mbox")
+      node.send(('echo, Symbol("test@localhost")), mbox.self, (('mbox, Symbol("scala@localhost")), 'blah))
+      mbox.receive must ==('blah)
+    }
+    
     "remove processes on exit" in {
       val node = new ErlangNode(Symbol("scala@localhost"), cookie)
       val pid = node.spawn[FailProcess]

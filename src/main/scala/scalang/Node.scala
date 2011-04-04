@@ -30,6 +30,8 @@ trait Node {
   def spawn[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid
   def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid
   def spawnMbox : Mailbox
+  def spawnMbox(regName : String) : Mailbox
+  def spawnMbox(regName : Symbol) : Mailbox
   def register(regName : String, pid : Pid)
   def register(regName : Symbol, pid : Pid)
   def getNames : Set[Symbol]
@@ -71,6 +73,13 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     box.addLinkListener(this)
     processes.put(p, box)
     box
+  }
+  
+  def spawnMbox(regName : String) : Mailbox = spawnMbox(Symbol(regName))
+  def spawnMbox(regName : Symbol) : Mailbox = {
+    val mbox = spawnMbox
+    register(regName, mbox.self)
+    mbox
   }
   
   def createPid : Pid = {
@@ -147,7 +156,7 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     val ref = makeRef
     mbox.send('net_kernel, (Symbol("$gen_call"), (mbox.self, ref), ('is_auth, name)))
     val result = mbox.receive(timeout) match {
-      case (ref, 'yes) => true
+      case Some((ref, 'yes)) => true
       case m => 
         println("msg " + m)
         false
@@ -212,6 +221,7 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   
   def handleSend(to : Symbol, msg : Any) {
     for (pid <- whereis(to)) {
+      println("sending " + msg + " to " + pid + " for " + to)
       handleSend(pid, msg)
     }
   }
@@ -264,6 +274,7 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   
   def isLocal(pid : Pid) : Boolean = {
+    println("isLocal " + pid + " name " + name + " creation " + creation)
     pid.node == name && pid.creation == creation
   }
   

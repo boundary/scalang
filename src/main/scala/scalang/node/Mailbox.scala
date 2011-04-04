@@ -16,10 +16,10 @@ class Mailbox(ctx : ProcessContext) extends ProcessLike {
   }
   
   def receive : Any = {
-    queue.poll
+    queue.take
   }
   
-  def receive(timeout : Long) : Any = {
-    queue.poll(timeout, TimeUnit.MILLISECONDS)
+  def receive(timeout : Long) : Option[Any] = {
+    Option(queue.poll(timeout, TimeUnit.MILLISECONDS))
   }
 }

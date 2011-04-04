@@ -107,5 +107,16 @@ class NodeSpec extends Specification {
       node.isAlive(failProc) must ==(false)
       node.isAlive(linkProc) must ==(false)
     }
+    
+    "deliver remote breakages" in {
+      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      val mbox = node.spawnMbox('mbox)
+      val scala = node.spawnMbox('scala)
+      erl = Escript("link_delivery.escript")
+      val remotePid = mbox.receive.asInstanceOf[Pid]
+      mbox.link(remotePid)
+      mbox.exit('blah)
+      scala.receive must ==('blah)
+    }
   }
 }

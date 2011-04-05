@@ -4,8 +4,9 @@ import scalang._
 import org.jetlang.channels._
 import org.jetlang.core._
 import org.jetlang.fibers._
+import scalang.util.Log
 
-class ProcessFiber(val process : ProcessLike, val fiber : Fiber) extends ProcessLike {
+class ProcessFiber(val process : ProcessLike, val fiber : Fiber) extends ProcessLike with Log {
   
   override def self = process.self
   
@@ -48,7 +49,8 @@ class ProcessFiber(val process : ProcessLike, val fiber : Fiber) extends Process
         process.handleMessage(msg)
       } catch {
         case e : Throwable =>
-          
+          error("An error occurred in actor " + this, e)
+          process.exit(e.getMessage)
       }
     }
   })
@@ -60,7 +62,8 @@ class ProcessFiber(val process : ProcessLike, val fiber : Fiber) extends Process
         process.handleExit(msg._1, msg._2)
       } catch {
         case e : Throwable =>
-          
+          error("An error occurred during handleExit in actor " + this, e)
+          process.exit(e.getMessage)
       }
     }
   })

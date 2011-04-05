@@ -19,7 +19,6 @@ class EpmdSpec extends Specification {
     "publish a port to a running epmd instance" in {
       val epmd = Epmd("localhost")
       val creation = epmd.alive(5480, "fuck@you.com")
-      println("creation " + creation)
       creation must beLike { case Some(v : Int) => true }
       epmd.close
     }

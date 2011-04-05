@@ -18,7 +18,6 @@ class ScalaTermEncoder extends OneToOneEncoder {
     val buffer = ChannelBuffers.dynamicBuffer(512)
     //write distribution header
     buffer.writeBytes(ByteArray(112,131))
-/*    println("sending obj " + obj)*/
     obj match {
       case Tock =>
         buffer.clear
@@ -38,7 +37,6 @@ class ScalaTermEncoder extends OneToOneEncoder {
         encodeObject(buffer, msg)
     }
     
-/*    println("sending " + buffer)*/
     buffer
   }
   

@@ -19,23 +19,19 @@ class ClientHandshakeHandler(name : Symbol, cookie : String) extends HandshakeHa
   states(
     state('disconnected, {
       case ConnectedMessage =>
-/*        println("Connected")*/
         sendName
         'connected
     }),
     
     state('connected, {
       case StatusMessage("ok") =>
-/*        println("status ok")*/
         'status_ok
       case StatusMessage(status) =>
-/*        println("status " + status)*/
         throw new ErlangAuthException("Bad status message: " + status)
     }),
     
     state('status_ok, {
       case ChallengeMessage(version, flags, c, name) =>
-/*        println(ChallengeMessage(version, flags, c, name).toString)*/
         peer = Symbol(name)
         sendChallengeReply(c)
         'reply_sent
@@ -43,7 +39,6 @@ class ClientHandshakeHandler(name : Symbol, cookie : String) extends HandshakeHa
     
     state('reply_sent, {
       case ChallengeAckMessage(digest) =>
-/*        println(ChallengeAckMessage(digest).toString)*/
         verifyChallengeAck(digest)
         drainQueue
         handshakeSucceeded
@@ -58,7 +53,6 @@ class ClientHandshakeHandler(name : Symbol, cookie : String) extends HandshakeHa
     val channel = ctx.getChannel
     val future = Channels.future(channel)
     val msg = NameMessage(5, DistributionFlags.default, name.name)
-/*    println(msg.toString)*/
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
     
@@ -69,7 +63,6 @@ class ClientHandshakeHandler(name : Symbol, cookie : String) extends HandshakeHa
     this.challenge = random.nextInt
     val d = digest(peerChallenge, cookie)
     val msg = ChallengeReplyMessage(challenge, d)
-/*    println(msg.toString)*/
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
   

@@ -22,7 +22,6 @@ class ScalaTermDecoder extends OneToOneDecoder {
   }
   
   def readMessage(buffer : ChannelBuffer) : AnyRef = {
-/*    println("buffer " + buffer)*/
     val t = buffer.readByte
     if (t != 112) throw new DistributedProtocolException("Got message of type " + t)
 

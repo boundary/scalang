@@ -47,7 +47,6 @@ class ErlangNodeClient(node : ErlangNode, host : String, port : Int, control : O
         }
       } else {
         f.getCause.printStackTrace
-/*        println("FUCK")*/
       }
     }
   })

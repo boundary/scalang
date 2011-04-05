@@ -29,7 +29,7 @@ class NodeSpec extends Specification {
       val node = new ErlangNode(Symbol("test@localhost"), cookie)
       erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_kernel:connect_node('test@localhost')])."))
       val read = new BufferedReader(new InputStreamReader(erl.getInputStream))
-      println(read.readLine)
+      read.readLine
       node.channels.keySet.toSet must contain(Symbol("tmp@localhost"))
     }
     

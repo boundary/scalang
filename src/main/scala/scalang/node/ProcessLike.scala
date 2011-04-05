@@ -27,7 +27,6 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
   def exit(reason : Any) {
     if (state != 'alive) return
     state = 'dead
-    println("exit " + reason + " links " + links + " exits " + exitListeners + " this " + this)
     for (link <- links) {
       link.break(reason)
     }
@@ -50,9 +49,7 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
     for (listener <- linkListeners) {
       l.addLinkListener(listener)
     }
-    println("adding link " + l + " to " + this)
     links.add(l)
-    println("links " + links)
   }
   
   def unlink(to : Pid) {

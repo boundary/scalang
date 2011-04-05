@@ -58,7 +58,6 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
   
   override def writeRequested(ctx : ChannelHandlerContext, e : MessageEvent) {
     this.ctx = ctx
-/*    println("write requested: " + e)*/
     if (isVerified) {
       super.writeRequested(ctx,e)
     } else {
@@ -102,19 +101,16 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
       p.remove(name)
     }
     for (msg <- messages) {
-/*      println("sending " + msg + " downstream")*/
       ctx.sendDownstream(msg)
     }
     messages.clear
   }
   
   protected def handshakeSucceeded {
-/*    println("suceeded")*/
     ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeSucceeded(peer, ctx.getChannel), null))
   }
   
   protected def handshakeFailed {
-/*    println("failied")*/
     ctx.getChannel.close
     ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeFailed(peer), null))
   }

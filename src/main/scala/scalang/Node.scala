@@ -158,7 +158,6 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     val result = mbox.receive(timeout) match {
       case Some((ref, 'yes)) => true
       case m => 
-        println("msg " + m)
         false
     }
     mbox.exit('normal)
@@ -221,7 +220,6 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   
   def handleSend(to : Symbol, msg : Any) {
     for (pid <- whereis(to)) {
-      println("sending " + msg + " to " + pid + " for " + to)
       handleSend(pid, msg)
     }
   }
@@ -236,10 +234,8 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   
   def handleExit(from : Pid, reason : Any) {
-    println("handleExit " + from + " processes " + processes)
     Option(processes.get(from)) match {
       case Some(pf : ProcessFiber) =>
-        println("disposing of fiber " + pf)
         val fiber = pf.fiber
         fiber.dispose
       case _ =>
@@ -249,7 +245,6 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   
   def break(from : Pid, to : Pid, reason : Any) {
-    println("break(" + from + ", " + to + ", " + reason + ")")
     if (isLocal(to)) {
       for (proc <- process(to)) {
         proc.handleExit(from, reason)
@@ -274,7 +269,6 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   
   def isLocal(pid : Pid) : Boolean = {
-    println("isLocal " + pid + " name " + name + " creation " + creation)
     pid.node == name && pid.creation == creation
   }
   
@@ -292,7 +286,6 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   def connectAndSend(peer : Symbol, msg : Option[Any] = None) {
     val hostname = splitHostname(peer).getOrElse(throw new ErlangNodeException("Cannot resolve peer with no hostname: " + peer.name))
     val peerName = splitNodename(peer)
-/*    println("peer name " + peerName)*/
     val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
     val client = new ErlangNodeClient(this, hostname, port, msg)
   }

@@ -63,7 +63,6 @@ class HandshakeDecoderSpec extends Specification {
       embedder.offer(buffer)
       val msg = embedder.poll
       msg must beLike { case ChallengeAckMessage(digest) =>
-        println("digest " + digest.deep)
         digest.deep == ByteArray(112,111,111,111,111,111,111,111,111,111,111,111,111,111,111,112).deep
       }
     }

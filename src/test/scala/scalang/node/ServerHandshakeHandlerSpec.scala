@@ -23,7 +23,6 @@ class ServerHandshakeHandlerSpec extends Specification {
       challengeMsg must beLike { case ChallengeMessage(5, _, c : Int, _) => 
         challenge = c
         true }
-      println("challenge " + challenge)
       val md5 = MessageDigest.getInstance("MD5")
       md5.update(cookie.getBytes)
       md5.update(handshake.mask(challenge).toString.getBytes)

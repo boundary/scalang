@@ -20,7 +20,6 @@ class EpmdDecoderSpec extends Specification {
     "decode port please response" in {
       val embedder = new DecoderEmbedder[PortPleaseResp](new EpmdDecoder)
       val buffer = copiedBuffer(ByteArray(119, 0, 20, 140, ntypeR6, 0, 0, 5, 0, 5, 0, 4, 102, 117, 99, 107, 0, 0))
-      println("buffer " + buffer)
       embedder.offer(buffer)
       val resp = embedder.poll
       resp must ==(PortPleaseResp(5260, "fuck"))

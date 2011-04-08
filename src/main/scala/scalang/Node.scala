@@ -41,6 +41,7 @@ trait Node {
   def nodes : Set[Symbol]
   def makeRef : Reference
   def isAlive(pid : Pid) : Boolean
+  def shutdown
 }
 
 class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log with ExitListener with SendListener with LinkListener {
@@ -60,6 +61,20 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   val referenceCounter = new ReferenceCounter(name, creation)
   val netKernel = spawn[NetKernel]('net_kernel)
+  
+  def shutdown {
+    localEpmd.close
+    for ((node,channel) <- channels) {
+      channel.close
+    }
+    for((pid,process) <- processes) {
+      process.exit('node_shutdown)
+    }
+  }
+  
+  def finalize {
+    shutdown
+  }
   
   def spawnMbox : Mailbox = {
     val p = createPid

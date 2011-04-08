@@ -16,6 +16,7 @@ import fibers.PoolFiberFactory
 import core.BatchExecutorImpl
 import scala.collection.JavaConversions._
 import scalang.epmd._
+import scalang.util._
 
 object Node {
   def apply(name : Symbol) {
@@ -67,6 +68,7 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
       val pid = p
       val referenceCounter = n.referenceCounter
       val node = n
+      val fiber = null
     })
     box.addExitListener(this)
     box.addSendListener(this)
@@ -91,28 +93,18 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   //node external interface
   def spawn[T <: Process](implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
-    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid)
-    val fiber = factory.create
+    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid, None)
     process.addExitListener(this)
     process.addSendListener(this)
     process.addLinkListener(this)
-    val procFiber = new ProcessFiber(process, fiber)
-    processes.put(pid, procFiber)
-    fiber.start
+    processes.put(pid, process)
+    process.fiber.start
     pid
   }
   
   def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid = {
-    val pid = createPid
-    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid)
-    val fiber = factory.create
-    process.addExitListener(this)
-    process.addSendListener(this)
-    process.addLinkListener(this)
-    val procFiber = new ProcessFiber(process, fiber)
-    processes.put(pid, procFiber)
+    val pid = spawn[T](mf)
     registeredNames.put(regName, pid)
-    fiber.start
     pid
   }
   
@@ -120,13 +112,17 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     spawn(Symbol(regName))(mf)
   }
   
-  protected def createProcess[T <: Process](clazz : Class[T], p : Pid) : Process = {
+  protected def createProcess[T <: Process](clazz : Class[T], p : Pid, tpc : Option[ThreadPoolConfig]) : Process = {
+    val f = tpc.map( config =>
+      factory.create(new BatchPoolExecutor(config.coreSize, config.maxSize, config.keepAlive))
+    ).getOrElse(factory.create)
     val constructor = clazz.getConstructor(classOf[ProcessContext])
     val n = this
     val ctx = new ProcessContext {
-      def pid = p
-      def referenceCounter = n.referenceCounter
-      def node = n
+      val pid = p
+      val referenceCounter = n.referenceCounter
+      val node = n
+      val fiber = f
     }
     constructor.newInstance(ctx)
   }
@@ -235,7 +231,7 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   
   def handleExit(from : Pid, reason : Any) {
     Option(processes.get(from)) match {
-      case Some(pf : ProcessFiber) =>
+      case Some(pf : Process) =>
         val fiber = pf.fiber
         fiber.dispose
       case _ =>

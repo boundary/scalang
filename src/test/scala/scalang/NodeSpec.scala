@@ -88,7 +88,7 @@ class NodeSpec extends Specification {
     "remove processes on exit" in {
       val node = new ErlangNode(Symbol("scala@localhost"), cookie)
       val pid = node.spawn[FailProcess]
-      node.processes.get(pid) must beLike { case f : ProcessFiber => true }
+      node.processes.get(pid) must beLike { case f : Process => true }
       node.handleSend(pid, 'bah)
       Thread.sleep(100)
       Option(node.processes.get(pid)) must beNone

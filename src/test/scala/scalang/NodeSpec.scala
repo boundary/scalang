@@ -10,6 +10,7 @@ class NodeSpec extends Specification {
   "Node" should {
     var epmd : JProc = null
     var erl : JProc = null
+    var node : ErlangNode = null
     doBefore {
       epmd = EpmdCmd()
     }
@@ -17,6 +18,7 @@ class NodeSpec extends Specification {
     doAfter {
       epmd.destroy
       epmd.waitFor
+      if (node != null) { node.shutdown }
       if (erl != null) {
         erl.destroy
         erl.waitFor
@@ -26,7 +28,7 @@ class NodeSpec extends Specification {
     val cookie = "test"
     
     "get connections from a remote node" in {
-      val node = new ErlangNode(Symbol("test@localhost"), cookie)
+      node = Node(Symbol("test@localhost"), cookie)
       erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_kernel:connect_node('test@localhost')])."))
       val read = new BufferedReader(new InputStreamReader(erl.getInputStream))
       read.readLine
@@ -34,7 +36,7 @@ class NodeSpec extends Specification {
     }
     
     "connect to a remote node" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       erl = Escript("receive_connection.escript")
       ReadLine(erl) //ready
       val pid = node.createPid
@@ -45,7 +47,7 @@ class NodeSpec extends Specification {
     }
     
     "accept pings" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_adm:ping('scala@localhost')])."))
       val result = ReadLine(erl)
       result must ==("pong")
@@ -53,14 +55,14 @@ class NodeSpec extends Specification {
     }
     
     "send pings" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       erl = Escript("receive_connection.escript")
       ReadLine(erl)
       node.ping(Symbol("test@localhost"), 1000) must ==(true)
     }
     
     "send local regname" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       val echoPid = node.spawn[EchoProcess]('echo)
       val mbox = node.spawnMbox
       node.send('echo, (mbox.self, 'blah))
@@ -68,7 +70,7 @@ class NodeSpec extends Specification {
     }
     
     "send remote regname" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       erl = Escript("echo.escript")
       ReadLine(erl)
       val mbox = node.spawnMbox
@@ -77,7 +79,7 @@ class NodeSpec extends Specification {
     }
     
     "receive remove regname" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       erl = Escript("echo.escript")
       ReadLine(erl)
       val mbox = node.spawnMbox("mbox")
@@ -86,7 +88,7 @@ class NodeSpec extends Specification {
     }
     
     "remove processes on exit" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       val pid = node.spawn[FailProcess]
       node.processes.get(pid) must beLike { case f : Process => true }
       node.handleSend(pid, 'bah)
@@ -95,7 +97,7 @@ class NodeSpec extends Specification {
     }
     
     "deliver local breakages" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       val linkProc = node.spawn[LinkProcess]
       val failProc = node.spawn[FailProcess]
       val mbox = node.spawnMbox
@@ -109,7 +111,7 @@ class NodeSpec extends Specification {
     }
     
     "deliver remote breakages" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       val mbox = node.spawnMbox('mbox)
       val scala = node.spawnMbox('scala)
       erl = Escript("link_delivery.escript")
@@ -120,7 +122,7 @@ class NodeSpec extends Specification {
     }
     
     "deliver local breakages" in {
-      val node = new ErlangNode(Symbol("scala@localhost"), cookie)
+      node = Node(Symbol("scala@localhost"), cookie)
       val mbox = node.spawnMbox('mbox)
       erl = Escript("link_delivery.escript")
       val remotePid = mbox.receive.asInstanceOf[Pid]

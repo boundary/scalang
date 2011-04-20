@@ -7,6 +7,7 @@ class ServiceSpec extends Specification {
   "Service" should {
     val cookie = "test"
     var epmd : JProc = null
+    var node : ErlangNode = null
     doBefore {
       epmd = EpmdCmd()
     }
@@ -14,17 +15,18 @@ class ServiceSpec extends Specification {
     doAfter {
       epmd.destroy
       epmd.waitFor
+      node.shutdown
     }
     
     "deliver casts" in {
-      val node = new ErlangNode(Symbol("test@localhost"), cookie)
+      node = Node(Symbol("test@localhost"), cookie)
       val service = node.spawn[CastNoopService]
       node.send(service, (Symbol("$gen_cast"),'blah))
       node.isAlive(service) must ==(true)
     }
     
     "deliver calls" in {
-      val node = new ErlangNode(Symbol("test@localhost"), cookie)
+      node = Node(Symbol("test@localhost"), cookie)
       val service = node.spawn[CallEchoService]
       val mbox = node.spawnMbox
       val ref = node.makeRef
@@ -33,7 +35,7 @@ class ServiceSpec extends Specification {
     }
     
     "respond to pings" in {
-      val node = new ErlangNode(Symbol("test@localhost"), cookie)
+      node = Node(Symbol("test@localhost"), cookie)
       val service = node.spawn[CastNoopService]
       val mbox = node.spawnMbox
       val ref = node.makeRef

@@ -1,0 +1,17 @@
+h1. Introduction
+
+Scalang is a message passing and actor library that allows Scala and Erlang applications to easily communicate.  Scalang is a full implementation of the Erlang distributed node protocol.  Scalang provides an actor oriented API that can be used to interact with Erlang nodes in an idiomatic, OTP compliant way.  Scalang is built on Netty for its networking layer and Jetlang for its actor implementation.
+
+h1. Usage
+
+Most of Scalang's functionality is accessible through its Node object. Scalang nodes can be started like so:
+
+<pre>
+<code>
+    val node = Node("scala@localhost.local", "cookie")
+</code>
+</pre>
+
+Starting a Scalang node like this will register it with the local "epmd":http://erlang.org/doc/man/epmd.html instance, which must be running on the local host.  Scalang will then be available to receive and make connections to other Erlang nodes.  In this case, its node name would be <code>scala@localhost.local</code> and its magic cookie is @cookie@.  Any Erlang or Scalang node which shares this magic cookie can now connect to this node and send messages using the node name.
+
+Messages can be delivered to and sent from _processes_.  A process, in Erlang terminology, is a lightweight actor that shares no memory with any other process.  Scalang comes equipped with an actor library engineered to behave very much like Erlang's processes.

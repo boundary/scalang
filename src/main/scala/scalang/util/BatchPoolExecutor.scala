@@ -1,16 +1,31 @@
 package scalang.util
 
-import concurrent.forkjoin.LinkedTransferQueue
 import org.jetlang.core._
 import java.util._
 import java.util.concurrent._
+import overlock.threadpool._
 
-class BatchPoolExecutor(coreSize : Int, maxSize : Int, keepAlive : Long) extends ThreadPoolExecutor(coreSize, maxSize, keepAlive, TimeUnit.MILLISECONDS, new LinkedTransferQueue[Runnable]) with BatchExecutor {
+class BatchPoolExecutor(path : String, 
+  name : String, 
+  coreSize : Int, 
+  maxSize : Int, 
+  keepAlive : Long,
+  unit : TimeUnit,
+  queue : BlockingQueue[Runnable],
+  factory : ThreadFactory,
+  handler : RejectedExecutionHandler) extends 
+    InstrumentedThreadPoolExecutor(path, name, coreSize, maxSize, keepAlive, unit, queue, factory, handler) with 
+    BatchExecutor {
+  
   override def execute(reader : EventReader) {
-    var i = 0
-    while (i < reader.size) {
-      execute(reader.get(i))
-      i += 1
-    }
+    execute(new Runnable {
+      def run {
+        var i = 0
+        while (i < reader.size) {
+          reader.get(i).run
+          i += 1
+        }
+      }
+    })
   }
 }

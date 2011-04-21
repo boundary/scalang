@@ -12,19 +12,98 @@ import scalang.util.Log
 import scalang.node._
 import org.cliffc.high_scale_lib.NonBlockingHashMap
 import org.jetlang._
+import core._
+import java.io._
 import fibers.PoolFiberFactory
 import core.BatchExecutorImpl
 import scala.collection.JavaConversions._
 import scalang.epmd._
 import scalang.util._
+import java.security.SecureRandom
 
 object Node {
-  def apply(name : Symbol) {
+  val random = SecureRandom.getInstance("SHA1PRNG")
+  
+  def apply(name : Symbol) =
+    new ErlangNode(name, findOrGenerateCookie, NodeConfig(new DefaultThreadPoolFactory, None))
+  
+  def apply(name : Symbol, cookie : String) =
+    new ErlangNode(name, cookie, NodeConfig(new DefaultThreadPoolFactory, None))
+  
+  def apply(name : Symbol, cookie : String, tpf : ThreadPoolFactory) =
+    new ErlangNode(name, cookie, NodeConfig(tpf, None))
+  
+  def apply(name : Symbol, cookie : String, listener : ClusterListener) =
+    new ErlangNode(name, cookie, NodeConfig(new DefaultThreadPoolFactory, Some(listener)))
     
+  def apply(name : Symbol, cookie : String, nodeConfig : NodeConfig) =
+    new ErlangNode(name, cookie, nodeConfig)
+  
+  protected def findOrGenerateCookie : String = {
+    val homeDir = System.getenv("HOME")
+    if (homeDir == null) {
+      throw new Exception("No erlang cookie set and cannot read ~/.erlang.cookie.")
+    }
+    val file = new File(homeDir, ".erlang.cookie")
+    if (file.isFile) {
+      readFile(file)
+    } else {
+      val cookie = randomCookie
+      writeCookie(file, cookie)
+      cookie
+    }
+  }
+  
+  protected def randomCookie : String = {
+    val ary = new Array[Byte](20)
+    random.nextBytes(ary)
+    ary.map((x : Byte) => x.toHexString ).mkString("")
+  }
+  
+  protected def readFile(file : File) : String = {
+    val in = new BufferedReader(new FileReader(file))
+    val cookie = in.readLine
+    in.close
+    cookie
+  }
+  
+  protected def writeCookie(file : File, cookie : String) {
+    val out = new FileWriter(file)
+    out.write(cookie)
+    out.close
   }
 }
 
-trait Node {
+trait ClusterListener {
+  def nodeUp(node : Symbol)
+  def nodeDown(node : Symbol)
+}
+
+trait ClusterPublisher {
+  @volatile var listeners : List[ClusterListener] = Nil
+  
+  def addListener(listener : ClusterListener) {
+    listeners = listener :: listeners
+  }
+  
+  def clearListeners {
+    listeners = Nil
+  }
+  
+  def notifyNodeUp(node : Symbol) {
+    for (listener <- listeners) {
+      listener.nodeUp(node)
+    }
+  }
+  
+  def notifyNodeDown(node : Symbol) {
+    for (listener <- listeners) {
+      listener.nodeDown(node)
+    }
+  }
+}
+
+trait Node extends ClusterListener with ClusterPublisher {
   def name : Symbol
   def cookie : String
   def spawn[T <: Process](implicit mf : Manifest[T]) : Pid
@@ -44,14 +123,15 @@ trait Node {
   def shutdown
 }
 
-class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log with ExitListener with SendListener with LinkListener {
+class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) extends Node with Log with ExitListener with SendListener with LinkListener {
+  val poolFactory = config.poolFactory
   var creation : Int = 0
   val processes = new NonBlockingHashMap[Pid,ProcessLike]
   val registeredNames = new NonBlockingHashMap[Symbol,Pid]
   val channels = new NonBlockingHashMap[Symbol,Channel]
   val pidCount = new AtomicInteger(0)
   val pidSerial = new AtomicInteger(0)
-  val executor = Executors.newCachedThreadPool
+  val executor = poolFactory.createActorPool
   val factory = new PoolFiberFactory(executor)
   val server = new ErlangNodeServer(this)
   val localEpmd = Epmd("localhost")
@@ -61,6 +141,7 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   }
   val referenceCounter = new ReferenceCounter(name, creation)
   val netKernel = spawn[NetKernel]('net_kernel)
+  val cluster = spawn[Cluster]('cluster)
   
   def shutdown {
     localEpmd.close
@@ -72,7 +153,7 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     }
   }
   
-  def finalize {
+  override def finalize {
     shutdown
   }
   
@@ -108,17 +189,13 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
   //node external interface
   def spawn[T <: Process](implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
-    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid, None)
-    process.addExitListener(this)
-    process.addSendListener(this)
-    process.addLinkListener(this)
-    processes.put(pid, process)
-    process.fiber.start
+    createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(false))
     pid
   }
   
   def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid = {
-    val pid = spawn[T](mf)
+    val pid = createPid
+    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(regName.name, false))
     registeredNames.put(regName, pid)
     pid
   }
@@ -127,19 +204,47 @@ class ErlangNode(val name : Symbol, val cookie : String) extends Node with Log w
     spawn(Symbol(regName))(mf)
   }
   
-  protected def createProcess[T <: Process](clazz : Class[T], p : Pid, tpc : Option[ThreadPoolConfig]) : Process = {
-    val f = tpc.map( config =>
-      factory.create(new BatchPoolExecutor(config.coreSize, config.maxSize, config.keepAlive))
-    ).getOrElse(factory.create)
+  def spawn[T <: Process](reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+    val pid = createPid
+    createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(reentrant))
+    pid
+  }
+  
+  def spawn[T <: Process](regName : Symbol, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+    val pid = createPid
+    createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(regName.name, reentrant))
+    registeredNames.put(regName, pid)
+    pid
+  }
+  
+  def spawn[T <: Process](regName : String, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+    spawn[T](Symbol(regName),reentrant)(mf)
+  }
+  
+  override def nodeDown(node : Symbol) {
+    send('cluster, ('nodedown, node))
+  }
+  
+  override def nodeUp(node : Symbol) {
+    send('cluster, ('nodeup, node))
+  }
+  
+  protected def createProcess[T <: Process](clazz : Class[T], p : Pid, batch : BatchExecutor) : Process = {
     val constructor = clazz.getConstructor(classOf[ProcessContext])
     val n = this
     val ctx = new ProcessContext {
       val pid = p
       val referenceCounter = n.referenceCounter
       val node = n
-      val fiber = f
+      val fiber = factory.create(batch)
     }
-    constructor.newInstance(ctx)
+    val process = constructor.newInstance(ctx)
+    process.addExitListener(this)
+    process.addSendListener(this)
+    process.addLinkListener(this)
+    processes.put(p, process)
+    process.fiber.start
+    process
   }
   
   def register(regName : String, pid : Pid) {

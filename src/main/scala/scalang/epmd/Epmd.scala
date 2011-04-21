@@ -60,6 +60,7 @@ class Epmd(val host : String, val port : Int) {
     if (response.result == 0) {
       Some(response.creation)
     } else {
+      error("Epmd response was: " + response.result)
       None
     }
   }

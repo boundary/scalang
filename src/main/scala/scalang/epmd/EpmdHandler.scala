@@ -8,14 +8,19 @@ import netty.bootstrap._
 import netty.channel._
 import netty.handler.codec.frame._
 import scala.collection.JavaConversions._
+import scalang.util.Log
 
-class EpmdHandler extends SimpleChannelUpstreamHandler {
+class EpmdHandler extends SimpleChannelUpstreamHandler with Log {
   val queue = new ConcurrentLinkedQueue[EpmdResponse]
   
   def response : Callable[Any] = {
     val call = new EpmdResponse
     queue.add(call)
     call
+  }
+  
+  override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
+    error("Caught exception in epmd handler", e.getCause)
   }
   
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {

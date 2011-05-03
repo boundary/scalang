@@ -24,11 +24,11 @@ import java.security.SecureRandom
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
   
-  def apply(name : String) = apply(Symbol(name))
-  def apply(name : String, cookie : String) = apply(Symbol(name), cookie)
-  def apply(name : String, cookie : Stirng, tpf : ThreadPoolFactory) = apply(Symbol(name), cookie, tpf)
-  def apply(name : String, cookie : String, listener : ClusterListener) = apply(Symbol(name), cookie, listener)
-  def apply(name : String, cookie : String, nodeConfig : NodeConfig) = apply(Symbol(name), cookie, nodeConfig)
+  def apply(name : String) : Node = apply(Symbol(name))
+  def apply(name : String, cookie : String) : Node = apply(Symbol(name), cookie)
+  def apply(name : String, cookie : String, tpf : ThreadPoolFactory) : Node = apply(Symbol(name), cookie, tpf)
+  def apply(name : String, cookie : String, listener : ClusterListener) : Node = apply(Symbol(name), cookie, listener)
+  def apply(name : String, cookie : String, nodeConfig : NodeConfig) : Node = apply(Symbol(name), cookie, nodeConfig)
   
   def apply(name : Symbol) =
     new ErlangNode(name, findOrGenerateCookie, NodeConfig(new DefaultThreadPoolFactory, None))

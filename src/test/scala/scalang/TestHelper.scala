@@ -20,6 +20,8 @@ object ErlangVM {
 object Escript {
   def apply(command : String, args : String*) : SysProcess = {
     val url = getClass.getClassLoader.getResource(command)
+    val file = new File(url.getFile)
+    file.setExecutable(true)
     val builder = new ProcessBuilder(List(url.getFile) ++ args.toList)
     builder.start
   }

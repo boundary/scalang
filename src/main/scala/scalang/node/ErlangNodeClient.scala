@@ -6,7 +6,6 @@ import org.jboss.{netty => netty}
 import scalang._
 import netty.channel._
 import netty.bootstrap._
-import scalang.terms._
 import netty.handler.codec.frame._
 import socket.nio.NioClientSocketChannelFactory
 

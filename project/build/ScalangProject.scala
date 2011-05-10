@@ -7,11 +7,13 @@ class ScalangProject(info : ProjectInfo) extends DefaultProject(info) {
   override def managedStyle = ManagedStyle.Maven
   val boundaryPublic = "Boundary Public Repo" at "http://maven.boundary.com/artifactory/repo"
   
-  val publishTo = "Boundary Public Repo (Publish)" at "http://maven.boundary.com/artifactory/external"
+/*  val publishTo = "Boundary Public Repo (Publish)" at "http://maven.boundary.com/artifactory/external"*/
+  val publishTo = "Boundary Private Repo" at "http://maven.eng.boundary.com/artifactory/external"
+  
   
   val netty = "org.jboss.netty" % "netty" % "3.2.4.Final"
   val jetlang = "org.jetlang" % "jetlang" % "0.2.5"
-  val overlock = "com.boundary" %% "overlock" % "0.2"
+  val overlock = "com.boundary" %% "overlock" % "0.3"
   val specs = "org.scala-tools.testing" %% "specs" % "1.6.7" % "test"
   
   //logging
@@ -19,5 +21,5 @@ class ScalangProject(info : ProjectInfo) extends DefaultProject(info) {
   val slf4japi = "org.slf4j" % "slf4j-api" % "1.5.8"
   val slf4j = "org.slf4j" % "slf4j-log4j12" % "1.5.8"
   
-  Credentials(Path.userHome / ".ivy2" / ".credentials-external", log)
+  Credentials(Path.userHome / ".ivy2" / ".credentials-internal", log)
 }

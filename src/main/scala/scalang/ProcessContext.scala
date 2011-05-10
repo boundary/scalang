@@ -8,4 +8,5 @@ trait ProcessContext {
   def node : ErlangNode
   def referenceCounter : ReferenceCounter
   def fiber : Fiber
+  def replyRegistry : ReplyRegistry
 }

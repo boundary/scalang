@@ -42,6 +42,33 @@ class ServiceSpec extends Specification {
       node.send(service, ('ping, mbox.self, ref))
       mbox.receive must ==(('pong, ref))
     }
+    
+    "call and response" in {
+      node = Node(Symbol("test@localhost"), cookie)
+      val service = node.spawn[CallAndReceiveService]
+      val mbox = node.spawnMbox
+      node.send(service, mbox.self)
+      val (Symbol("$gen_call"), (_, ref : Reference), req) = mbox.receive
+      req must ==("blah")
+      node.send(service, (ref, "barf"))
+      mbox.receive must ==("barf")
+    }
+  }
+}
+
+class CallAndReceiveService(ctx : ProcessContext) extends Service(ctx) {
+  override def handleCast(msg : Any) {
+    throw new Exception
+  }
+  
+  override def handleCall(from : Pid, msg : Any) : Any = {
+    throw new Exception
+  }
+  
+  override def handleInfo(msg : Any) {
+    val pid = msg.asInstanceOf[Pid]
+    val response = call(pid, "blah")
+    pid ! response
   }
 }
 
@@ -49,10 +76,26 @@ class CastNoopService(ctx : ProcessContext) extends Service(ctx) {
   override def handleCast(msg : Any) {
     println("cast received " + msg)
   }
+  
+  override def handleCall(from : Pid, msg : Any) : Any = {
+    throw new Exception
+  }
+  
+  override def handleInfo(msg : Any) {
+    throw new Exception
+  }
 }
 
 class CallEchoService(ctx : ProcessContext) extends Service(ctx) {
+  override def handleCast(msg : Any) {
+    throw new Exception
+  }
+  
   override def handleCall(from : Pid, msg : Any) : Any = {
     msg
+  }
+  
+  override def handleInfo(msg : Any) {
+    throw new Exception
   }
 }

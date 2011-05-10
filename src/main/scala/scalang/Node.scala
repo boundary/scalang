@@ -129,7 +129,12 @@ trait Node extends ClusterListener with ClusterPublisher {
   def shutdown
 }
 
-class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) extends Node with Log with ExitListener with SendListener with LinkListener {
+class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) extends Node 
+    with Log 
+    with ExitListener 
+    with SendListener 
+    with LinkListener 
+    with ReplyRegistry {
   val poolFactory = config.poolFactory
   var creation : Int = 0
   val processes = new NonBlockingHashMap[Pid,ProcessLike]
@@ -171,6 +176,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       val referenceCounter = n.referenceCounter
       val node = n
       val fiber = null
+      val replyRegistry = n
     })
     box.addExitListener(this)
     box.addSendListener(this)
@@ -243,6 +249,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       val referenceCounter = n.referenceCounter
       val node = n
       val fiber = factory.create(batch)
+      val replyRegistry = n
     }
     val process = constructor.newInstance(ctx)
     process.addExitListener(this)
@@ -333,7 +340,9 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     if (isLocal(to)) {
       val process = processes.get(to)
       if (process != null) {
-        process.handleMessage(msg)
+        if (!tryDeliverReply(to,msg)) {
+          process.handleMessage(msg)
+        }
       }
     } else {
       getOrConnectAndSend(to.node, SendMessage(to, msg))

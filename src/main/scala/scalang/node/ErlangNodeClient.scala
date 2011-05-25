@@ -9,7 +9,7 @@ import netty.bootstrap._
 import netty.handler.codec.frame._
 import socket.nio.NioClientSocketChannelFactory
 
-class ErlangNodeClient(node : ErlangNode, host : String, port : Int, control : Option[Any]) {
+class ErlangNodeClient(node : ErlangNode, host : String, port : Int, control : Option[Any], typeFactory : TypeFactory) {
   val bootstrap = new ClientBootstrap(
     new NioClientSocketChannelFactory(
       Executors.newCachedThreadPool,
@@ -28,7 +28,7 @@ class ErlangNodeClient(node : ErlangNode, host : String, port : Int, control : O
       pipeline.addLast("handshakeHandler", new ClientHandshakeHandler(node.name, node.cookie))
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
-      pipeline.addLast("erlangDecoder", new ScalaTermDecoder)
+      pipeline.addLast("erlangDecoder", new ScalaTermDecoder(typeFactory))
       pipeline.addLast("erlangEncoder", new ScalaTermEncoder)
       pipeline.addLast("erlangHandler", new ErlangHandler(node))
       

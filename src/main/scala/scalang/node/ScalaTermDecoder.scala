@@ -8,7 +8,7 @@ import netty.buffer._
 import scala.annotation.tailrec
 import scalang._
 
-class ScalaTermDecoder extends OneToOneDecoder {
+class ScalaTermDecoder(factory : TypeFactory) extends OneToOneDecoder {
   
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = obj match {
     case buffer : ChannelBuffer =>
@@ -50,19 +50,23 @@ class ScalaTermDecoder extends OneToOneDecoder {
       case 131 => //version derp
         readTerm(buffer)
       case 97 => //small integer
-        buffer.readUnsignedByte
+        buffer.readUnsignedByte.toInt
       case 98 => //integer
         buffer.readInt
       case 99 => //float string
-        val bytes = new Array[Byte](26)
+        val bytes = new Array[Byte](31)
         buffer.readBytes(bytes)
         val floatString = new String(bytes)
         floatString.toDouble
-      case 100 => //atom
+      case 100 => //atom OR boolean
         val len = buffer.readShort
         val bytes = new Array[Byte](len)
         buffer.readBytes(bytes)
-        Symbol(new String(bytes))
+        Symbol(new String(bytes)) match {
+          case 'true => true
+          case 'false => false
+          case atom => atom
+        }
       case 101 => //reference
         val node = readTerm(buffer).asInstanceOf[Symbol]
         val id = buffer.readInt
@@ -212,36 +216,50 @@ class ScalaTermDecoder extends OneToOneDecoder {
     }
   }
   
-  def readTuple(arity : Int, buffer : ChannelBuffer) = arity match {
-    case 1 => (readTerm(buffer))
-    case 2 => (readTerm(buffer), readTerm(buffer))
-    case 3 => (readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 4 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 5 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 6 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 7 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 8 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 9 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 10 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 11 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 12 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 13 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 14 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 15 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 16 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 17 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 18 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 19 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 20 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 21 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case 22 => (readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
-    case _ => readBigTuple(arity, buffer)
+  def readTuple(arity : Int, buffer : ChannelBuffer) = {
+    readTerm(buffer) match {
+      case name : Symbol =>
+        val reader = new TermReader(buffer, this)
+        factory.createType(name, arity-1, reader) match {
+          case Some(obj) => obj
+          case None =>
+            readVanillaTuple(name, arity, buffer)
+        }
+      case first =>
+        readVanillaTuple(first, arity, buffer)
+    }
+  }
+   
+  def readVanillaTuple(first : Any, arity : Int, buffer : ChannelBuffer) : Any = arity match {
+    case 1 => (first)
+    case 2 => (first, readTerm(buffer))
+    case 3 => (first, readTerm(buffer), readTerm(buffer))
+    case 4 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 5 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 6 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 7 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 8 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 9 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 10 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 11 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 12 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 13 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 14 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 15 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 16 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 17 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 18 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 19 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 20 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 21 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case 22 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
+    case _ => readBigTuple(first, arity, buffer)
   }
   
-  def readBigTuple(arity : Int, buffer : ChannelBuffer) : BigTuple = {
-    val elements = (for(n <- (0 until arity)) yield {
+  def readBigTuple(first : Any, arity : Int, buffer : ChannelBuffer) : BigTuple = {
+    val elements = (for(n <- (1 until arity)) yield {
       readTerm(buffer)
     }).toSeq
-    new BigTuple(elements)
+    new BigTuple(Seq(first) ++ elements)
   }
 }

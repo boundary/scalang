@@ -144,7 +144,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   val pidSerial = new AtomicInteger(0)
   val executor = poolFactory.createActorPool
   val factory = new PoolFiberFactory(executor)
-  val server = new ErlangNodeServer(this)
+  val server = new ErlangNodeServer(this,config.typeFactory)
   val localEpmd = Epmd("localhost")
   localEpmd.alive(server.port, splitNodename(name)) match {
     case Some(c) => creation = c
@@ -418,7 +418,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     val hostname = splitHostname(peer).getOrElse(throw new ErlangNodeException("Cannot resolve peer with no hostname: " + peer.name))
     val peerName = splitNodename(peer)
     val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
-    val client = new ErlangNodeClient(this, hostname, port, msg)
+    val client = new ErlangNodeClient(this, hostname, port, msg, config.typeFactory)
   }
   
   def splitNodename(peer : Symbol) : String = {

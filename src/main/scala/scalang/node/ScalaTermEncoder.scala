@@ -11,10 +11,12 @@ import scalang._
 import java.util.{Formatter, Locale}
 import scalang.util.ByteArray
 import scalang.util.CamelToUnder._
+import com.codahale.logula.Logging
 
-class ScalaTermEncoder extends OneToOneEncoder {
+class ScalaTermEncoder extends OneToOneEncoder with Logging {
   
   override def encode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
+    log.debug("sending msg %s", obj)
     val buffer = ChannelBuffers.dynamicBuffer(512)
     //write distribution header
     buffer.writeBytes(ByteArray(112,131))

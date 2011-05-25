@@ -14,8 +14,9 @@ import scala.annotation._
 import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
+import com.codahale.logula.Logging
 
-abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine with Log {
+abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine with Logging {
   override val start = 'disconnected
   @volatile var ctx : ChannelHandlerContext = null
   @volatile var peer : Symbol = null
@@ -52,7 +53,7 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
   
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
     this.ctx = ctx
-    error("Exception caught during erlang handshake: ", e.getCause)
+    log.error(e.getCause, "Exception caught during erlang handshake: ")
     handshakeFailed
   }
   

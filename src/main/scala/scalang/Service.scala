@@ -7,7 +7,6 @@ import org.jetlang._
 import channels._
 import core._
 import fibers._
-import scalang.util.Log
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 /**

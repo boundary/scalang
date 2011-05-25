@@ -7,13 +7,20 @@ import org.jboss.netty._
 import bootstrap._
 import channel._
 import scalang._
+import com.codahale.logula.Logging
 
-class ErlangHandler(node : ErlangNode) extends SimpleChannelUpstreamHandler {
+class ErlangHandler(node : ErlangNode) extends SimpleChannelUpstreamHandler with Logging {
   
   @volatile var peer : Symbol = null
   
+  override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
+    log.error(e.getCause, "error caught in erlang handler")
+  }
+  
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
-    e.getMessage match {
+    val msg = e.getMessage 
+    log.debug("handler message %s", msg)
+    msg match {
       case Tick =>
         ctx.getChannel.write(Tock) //channel heartbeat for erlang
       case HandshakeFailed(name) =>

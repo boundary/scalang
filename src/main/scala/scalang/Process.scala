@@ -5,9 +5,9 @@ import org.cliffc.high_scale_lib._
 import scalang.node.{ExitListener, SendListener, ProcessLike}
 import org.jetlang.channels._
 import org.jetlang.core._
-import scalang.util.Log
+import com.codahale.logula.Logging
 
-abstract class Process(ctx : ProcessContext) extends ProcessLike with Log {
+abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging {
   val self = ctx.pid
   val fiber = ctx.fiber
   val referenceCounter = ctx.referenceCounter
@@ -45,7 +45,7 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Log {
         p.onMessage(msg)
       } catch {
         case e : Throwable =>
-          error("An error occurred in actor " + this, e)
+          log.error(e, "An error occurred in actor %s", this)
           exit(e.getMessage)
       }
     }
@@ -58,7 +58,7 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Log {
         trapExit(msg._1, msg._2)
       } catch {
         case e : Throwable =>
-          error("An error occurred during handleExit in actor " + this, e)
+          log.error(e, "An error occurred during handleExit in actor %s", this)
           exit(e.getMessage)
       }
     }

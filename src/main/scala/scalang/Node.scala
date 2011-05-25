@@ -8,7 +8,6 @@ import netty.channel._
 import netty.bootstrap._
 import socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent._
-import scalang.util.Log
 import scalang.node._
 import org.cliffc.high_scale_lib.NonBlockingHashMap
 import org.jetlang._
@@ -20,6 +19,8 @@ import scala.collection.JavaConversions._
 import scalang.epmd._
 import scalang.util._
 import java.security.SecureRandom
+import com.codahale.logula.Logging
+import org.apache.log4j.Level
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
@@ -130,11 +131,11 @@ trait Node extends ClusterListener with ClusterPublisher {
 }
 
 class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) extends Node 
-    with Log 
     with ExitListener 
     with SendListener 
     with LinkListener 
-    with ReplyRegistry {
+    with ReplyRegistry
+    with Logging {
   val poolFactory = config.poolFactory
   var creation : Int = 0
   val processes = new NonBlockingHashMap[Pid,ProcessLike]
@@ -298,8 +299,9 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
   
   def deliverLink(from : Pid, to : Pid) {
+    log.debug("deliverLink %s -> %s", from, to)
     if (from == to) {
-      warn("Trying to link a pid to itself: " + from)
+      log.warn("Trying to link a pid to itself: %s", from)
       return
     }
     
@@ -314,12 +316,13 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   
   //node internal interface
   def link(from : Pid, to : Pid) {
+    log.debug("link %s -> %s", from, to)
     if (from == to) {
-      warn("Trying to link a pid to itself: " + from)
+      log.warn("Trying to link a pid to itself: %s", from)
       return
     }
     if (!isLocal(from) && !isLocal(to)) {
-      warn("Trying to link non-local pids: " + from + " -> " + to)
+      log.warn("Trying to link non-local pids: %s -> %s", from, to)
       return
     }
     
@@ -337,14 +340,17 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   def send(to : (Symbol,Symbol), from : Pid, msg : Any) = handleSend(to, from, msg)
   
   def handleSend(to : Pid, msg : Any) {
+    log.debug("send %s to %s", msg, to)
     if (isLocal(to)) {
       val process = processes.get(to)
+      log.debug("send local to %s", process)
       if (process != null) {
         if (!tryDeliverReply(to,msg)) {
           process.handleMessage(msg)
         }
       }
     } else {
+      log.debug("send remote to %s", to.node)
       getOrConnectAndSend(to.node, SendMessage(to, msg))
     }
   }

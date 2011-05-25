@@ -116,6 +116,9 @@ trait Node extends ClusterListener with ClusterPublisher {
   def spawn[T <: Process](implicit mf : Manifest[T]) : Pid
   def spawn[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid
   def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid
+  def spawnService[T <: Service](args : Any)(implicit mf : Manifest[T]) : Pid
+  def spawnService[T <: Service](regName : String, args : Any)(implicit mf : Manifest[T]) : Pid
+  def spawnService[T <: Service](regName : Symbol, args : Any)(implicit mf : Manifest[T]) : Pid
   def spawnMbox : Mailbox
   def spawnMbox(regName : String) : Mailbox
   def spawnMbox(regName : Symbol) : Mailbox
@@ -234,6 +237,37 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     spawn[T](Symbol(regName),reentrant)(mf)
   }
   
+  def spawnService[T <: Service](args : Any)(implicit mf : Manifest[T]) : Pid = {
+    spawnService(args, false)(mf)
+  }
+  
+  def spawnService[T <: Service](args : Any, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+    val pid = createPid
+    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(reentrant))
+    process.init(args)
+    pid
+  }
+  
+  def spawnService[T <: Service](regName : String, args : Any)(implicit mf : Manifest[T]) : Pid = {
+    spawnService(regName, args, false)(mf)
+  }
+  
+  def spawnService[T <: Service](regName : String, args : Any, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+    spawnService(Symbol(regName), args, reentrant)(mf)
+  }
+  
+  def spawnService[T <: Service](regName : Symbol, args : Any)(implicit mf : Manifest[T]) : Pid = {
+    spawnService(regName, args, false)(mf)
+  }
+  
+  def spawnService[T <: Service](regName : Symbol, args : Any, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+    val pid = createPid
+    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(regName.name, reentrant))
+    process.init(args)
+    registeredNames.put(regName, pid)
+    pid
+  }
+  
   override def nodeDown(node : Symbol) {
     send('cluster, ('nodedown, node))
   }
@@ -242,7 +276,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     send('cluster, ('nodeup, node))
   }
   
-  protected def createProcess[T <: Process](clazz : Class[T], p : Pid, batch : BatchExecutor) : Process = {
+  protected def createProcess[T <: Process](clazz : Class[T], p : Pid, batch : BatchExecutor) : T = {
     val constructor = clazz.getConstructor(classOf[ProcessContext])
     val n = this
     val ctx = new ProcessContext {
@@ -406,7 +440,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
   
   def isLocal(pid : Pid) : Boolean = {
-    pid.node == name && pid.creation == creation
+    pid.node == name //&& pid.creation == creation
   }
   
   def disconnected(peer : Symbol) {

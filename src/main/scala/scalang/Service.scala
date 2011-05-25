@@ -86,7 +86,7 @@ abstract class Service(ctx : ProcessContext) extends Process(ctx) {
   }
   
   def call(service : (Symbol,Symbol), msg : Any) : Any = {
-    call(service, msg)
+    call(service, msg, Long.MaxValue)
   }
   
   def call(service : (Symbol,Symbol), msg : Any, timeout : Long) : Any = {

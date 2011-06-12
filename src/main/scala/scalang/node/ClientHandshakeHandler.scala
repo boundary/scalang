@@ -26,6 +26,11 @@ class ClientHandshakeHandler(name : Symbol, cookie : String) extends HandshakeHa
     state('connected, {
       case StatusMessage("ok") =>
         'status_ok
+      case StatusMessage("ok_simultaneous") =>
+        'status_ok
+      case StatusMessage("alive") => //means the other node sees another conn from us. reconnecting too quick.
+        sendStatus("true")
+        'status_ok
       case StatusMessage(status) =>
         throw new ErlangAuthException("Bad status message: " + status)
     }),
@@ -48,6 +53,13 @@ class ClientHandshakeHandler(name : Symbol, cookie : String) extends HandshakeHa
     state('verified, {
       case _ => 'verified
     }))
+    
+  protected def sendStatus(st : String) {
+    val channel = ctx.getChannel
+    val future = Channels.future(channel)
+    val msg = StatusMessage(st)
+    ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
+  }
     
   protected def sendName {
     val channel = ctx.getChannel

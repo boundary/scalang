@@ -7,14 +7,21 @@ import scalang._
 import netty.channel._
 import netty.bootstrap._
 import netty.handler.codec.frame._
+import netty.handler.timeout._
+import netty.util.HashedWheelTimer
 import socket.nio.NioClientSocketChannelFactory
 
-class ErlangNodeClient(node : ErlangNode, host : String, port : Int, control : Option[Any], typeFactory : TypeFactory) {
+class ErlangNodeClient(
+    node : ErlangNode,
+    host : String,
+    port : Int,
+    control : Option[Any], 
+    typeFactory : TypeFactory, 
+    afterHandshake : Channel => Unit) {
   val bootstrap = new ClientBootstrap(
     new NioClientSocketChannelFactory(
-      Executors.newCachedThreadPool,
-      Executors.newCachedThreadPool))
-    
+      node.poolFactory.createBossPool,
+      node.poolFactory.createWorkerPool))
   bootstrap.setPipelineFactory(new ChannelPipelineFactory {
     def getPipeline : ChannelPipeline = {
       val pipeline = Channels.pipeline
@@ -28,9 +35,10 @@ class ErlangNodeClient(node : ErlangNode, host : String, port : Int, control : O
       pipeline.addLast("handshakeHandler", new ClientHandshakeHandler(node.name, node.cookie))
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
+      pipeline.addLast("timeout", new ReadTimeoutHandler(node.timer, 60))
       pipeline.addLast("erlangDecoder", new ScalaTermDecoder(typeFactory))
       pipeline.addLast("erlangEncoder", new ScalaTermEncoder)
-      pipeline.addLast("erlangHandler", new ErlangHandler(node))
+      pipeline.addLast("erlangHandler", new ErlangHandler(node, afterHandshake))
       
       pipeline
     }

@@ -40,7 +40,7 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
   def link(to : Pid) {
     linkWithoutNotify(to)
     for (listener <- linkListeners) {
-      listener.deliverLink(self, to)
+      listener.deliverLink(Link(self, to))
     }
   }
   

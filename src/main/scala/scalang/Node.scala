@@ -9,7 +9,8 @@ import netty.bootstrap._
 import socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent._
 import scalang.node._
-import org.cliffc.high_scale_lib.NonBlockingHashMap
+import org.cliffc.high_scale_lib._
+import overlock.atomicmap._
 import org.jetlang._
 import core._
 import java.io._
@@ -144,6 +145,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   val processes = new NonBlockingHashMap[Pid,ProcessLike]
   val registeredNames = new NonBlockingHashMap[Symbol,Pid]
   val channels = new NonBlockingHashMap[Symbol,Channel]
+  val links = AtomicMap.atomicNBHM[Channel,NonBlockingHashSet[Link]]
   val pidCount = new AtomicInteger(0)
   val pidSerial = new AtomicInteger(0)
   val executor = poolFactory.createActorPool
@@ -332,7 +334,9 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     channels.keySet.toSet.asInstanceOf[Set[Symbol]]
   }
   
-  def deliverLink(from : Pid, to : Pid) {
+  def deliverLink(link : Link) {
+    val from = link.from
+    val to = link.to
     log.debug("deliverLink %s -> %s", from, to)
     if (from == to) {
       log.warn("Trying to link a pid to itself: %s", from)
@@ -344,7 +348,11 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         p.linkWithoutNotify(from)
       }
     } else {
-      getOrConnectAndSend(to.node, LinkMessage(from, to))
+      getOrConnectAndSend(to.node, LinkMessage(from, to), { channel =>
+        val set = links.getOrElseUpdate(channel, new NonBlockingHashSet[Link])
+/*        println("adding remote link " + link + " to channel " + channel)*/
+        set.add(link)
+      })
     }
   }
   
@@ -415,9 +423,25 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     processes.remove(from)
   }
   
-  def break(from : Pid, to : Pid, reason : Any) {
+  //this only gets called from a remote link breakage()
+  def remoteBreak(link : Link, reason : Any) {
+    val from = link.from
+    val to = link.to
+    for (proc <- process(to)) {
+      proc.handleExit(from, reason)
+    }
+    for (proc <- process(from)) {
+      proc.handleExit(to, reason)
+    }
+  }
+  
+  //this will only get called from a local link breakage (process exit)
+  def break(link : Link, reason : Any) {
+    val from = link.from
+    val to = link.to
     if (isLocal(to)) {
       for (proc <- process(to)) {
+/*        println("exiting " + proc)*/
         proc.handleExit(from, reason)
       }
     } else {
@@ -444,21 +468,41 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
   
   def disconnected(peer : Symbol) {
-    channels.remove(peer)
-  }
-  
-  def getOrConnectAndSend(peer : Symbol, msg : Any) {
-    Option(channels.get(peer)) match {
-      case Some(channel) => channel.write(msg)
-      case None => connectAndSend(peer, Some(msg))
+    log.debug("lost connection to %s", peer)
+    if (channels.containsKey(peer)) {
+      val channel = channels.remove(peer)
+      //must break all links here
+      if (links.contains(channel)) {
+        val setOption = links.remove(channel)
+        for (set <- setOption; link <- set) {
+          remoteBreak(link, 'noconnection)
+        }
+      }
     }
   }
   
-  def connectAndSend(peer : Symbol, msg : Option[Any] = None) {
-    val hostname = splitHostname(peer).getOrElse(throw new ErlangNodeException("Cannot resolve peer with no hostname: " + peer.name))
-    val peerName = splitNodename(peer)
-    val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
-    val client = new ErlangNodeClient(this, hostname, port, msg, config.typeFactory)
+  def getOrConnectAndSend(peer : Symbol, msg : Any, afterHandshake : Channel => Unit = { channel => Unit }) {
+    Option(channels.get(peer)) match {
+      case Some(channel) =>
+        //race during channel shutdown
+        if (channel.isOpen) {
+          channel.write(msg)
+        }
+        afterHandshake(channel)
+      case None => connectAndSend(peer, Some(msg), afterHandshake)
+    }
+  }
+  
+  def connectAndSend(peer : Symbol, msg : Option[Any] = None, afterHandshake : Channel => Unit = {_ => Unit }) {
+    try {
+      val hostname = splitHostname(peer).getOrElse(throw new ErlangNodeException("Cannot resolve peer with no hostname: " + peer.name))
+      val peerName = splitNodename(peer)
+      val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
+      val client = new ErlangNodeClient(this, hostname, port, msg, config.typeFactory, afterHandshake)
+    } catch {
+      case e : Exception =>
+        log.debug(e, "Exception in connect and send.")
+    }
   }
   
   def splitNodename(peer : Symbol) : String = {

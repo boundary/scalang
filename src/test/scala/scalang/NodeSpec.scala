@@ -131,5 +131,18 @@ class NodeSpec extends Specification {
       Thread.sleep(200)
       node.isAlive(mbox.self) must ==(false)
     }
+    
+    "deliver breaks on channel disconnect" in {
+      println("discon")
+      node = Node(Symbol("scala@localhost"), cookie)
+      val mbox = node.spawnMbox('mbox)
+      erl = Escript("link_delivery.escript")
+      val remotePid = mbox.receive.asInstanceOf[Pid]
+      mbox.link(remotePid)
+      erl.destroy
+      erl.waitFor
+      Thread.sleep(100)
+      node.isAlive(mbox.self) must ==(false)
+    }
   }
 }

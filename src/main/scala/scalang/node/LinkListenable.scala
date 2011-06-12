@@ -9,15 +9,16 @@ trait LinkListenable {
     linkListeners = listener :: linkListeners
   }
   
-  def notifyBreak(from : Pid, to : Pid, reason : Any) {
+  def notifyBreak(link : Link, reason : Any) {
     for (listener <- linkListeners) {
-      listener.break(from, to, reason)
+/*      println("notifying " + listener)*/
+      listener.break(link, reason)
     }
   }
   
-  def notifyDeliverLink(from : Pid, to : Pid) {
+  def notifyDeliverLink(link : Link) {
     for (listener <- linkListeners) {
-      listener.deliverLink(from, to)
+      listener.deliverLink(link)
     }
   }
 }

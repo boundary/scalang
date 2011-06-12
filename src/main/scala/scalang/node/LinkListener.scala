@@ -3,7 +3,7 @@ package scalang.node
 import scalang._
 
 trait LinkListener {
-  def deliverLink(from : Pid, to : Pid)
+  def deliverLink(link : Link)
   
-  def break(from : Pid, to : Pid, reason : Any)
+  def break(link : Link, reason : Any)
 }

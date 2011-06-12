@@ -6,6 +6,7 @@ import scalang.node.{ExitListener, SendListener, ProcessLike}
 import org.jetlang.channels._
 import org.jetlang.core._
 import com.codahale.logula.Logging
+import java.util.concurrent.TimeUnit
 
 abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging {
   val self = ctx.pid
@@ -16,6 +17,54 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging {
   implicit def pid2sendable(pid : Pid) = new PidSend(pid,this)
   implicit def sym2sendable(to : Symbol) = new SymSend(to,this)
   implicit def dest2sendable(dest : (Symbol,Symbol)) = new DestSend(dest,self,this)
+  
+  def sendEvery(pid : Pid, msg : Any, delay : Long) {
+    val runnable = new Runnable {
+      def run = send(pid,msg)
+    }
+    fiber.scheduleAtFixedRate(runnable, delay, delay, TimeUnit.MILLISECONDS)
+  }
+  
+  def sendEvery(name : Symbol, msg : Any, delay : Long) {
+    val runnable = new Runnable {
+      def run = send(name,msg)
+    }
+    fiber.scheduleAtFixedRate(runnable, delay, delay, TimeUnit.MILLISECONDS)
+  }
+  
+  def sendEvery(name : (Symbol,Symbol), msg : Any, delay : Long) {
+    val runnable = new Runnable {
+      def run = send(name,self,msg)
+    }
+    fiber.scheduleAtFixedRate(runnable, delay, delay, TimeUnit.MILLISECONDS)
+  }
+  
+  def sendAfter(pid : Pid, msg : Any, delay : Long) {
+    val runnable = new Runnable {
+      def run {
+        send(pid, msg)
+      }
+    }
+    fiber.schedule(runnable, delay, TimeUnit.MILLISECONDS)
+  }
+  
+  def sendAfter(name : Symbol, msg : Any, delay : Long) {
+    val runnable = new Runnable {
+      def run {
+        send(name, msg)
+      }
+    }
+    fiber.schedule(runnable, delay, TimeUnit.MILLISECONDS)
+  }
+  
+  def sendAfter(dest : (Symbol,Symbol), msg : Any, delay : Long) {
+    val runnable = new Runnable {
+      def run {
+        send(dest, self, msg)
+      }
+    }
+    fiber.schedule(runnable, delay, TimeUnit.MILLISECONDS)
+  }
   
   /**
    * Subclasses should override this method with their own message handlers

@@ -7,6 +7,7 @@ import netty.bootstrap._
 import netty.channel._
 import socket.nio._
 import netty.handler.codec.frame._
+import overlock.threadpool._
 
 object Epmd {
   val defaultPort = 4369
@@ -24,8 +25,8 @@ object Epmd {
 class Epmd(val host : String, val port : Int) {
   val bootstrap = new ClientBootstrap(
     new NioClientSocketChannelFactory(
-      Executors.newCachedThreadPool,
-      Executors.newCachedThreadPool))
+      ThreadPool.instrumentedElastic("scalang.epmd", "boss", 1, 20),
+      ThreadPool.instrumentedElastic("scalang.epmd", "worker", 1, 20)))
       
   val handler = new EpmdHandler
       

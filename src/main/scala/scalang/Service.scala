@@ -62,7 +62,12 @@ abstract class Service(ctx : ProcessContext) extends Process(ctx) {
   def waitReply(ref : Reference, timeout : Long) : Any = {
     val queue = new LinkedBlockingQueue[Any]
     replyRegistry.registerReplyQueue(self, ref, queue)
-    queue.poll(timeout, TimeUnit.MILLISECONDS)
+    val response = queue.poll(timeout, TimeUnit.MILLISECONDS)
+    if (null == response) {
+      ('error, 'timeout)
+    } else {
+      response
+    }
   }
   
   def call(service : Pid, msg : Any) : Any = {

@@ -7,13 +7,19 @@ import java.nio._
 import netty.buffer._
 import scala.annotation.tailrec
 import scalang._
+import com.yammer.metrics._
+import scala.collection.mutable.ArrayBuffer
 
-class ScalaTermDecoder(factory : TypeFactory) extends OneToOneDecoder {
+class ScalaTermDecoder(factory : TypeFactory) extends OneToOneDecoder with Instrumented {
+  val decodeTimer = metrics.timer("decoding")
+  
   
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = obj match {
     case buffer : ChannelBuffer =>
       if (buffer.readableBytes > 0) {
-        readMessage(buffer)
+        decodeTimer.time {
+          readMessage(buffer)
+        }
       } else {
         Tick
       }
@@ -204,16 +210,21 @@ class ScalaTermDecoder(factory : TypeFactory) extends OneToOneDecoder {
   }
   
   def readList(length : Int, buffer : ChannelBuffer) : (List[Any], Option[Any]) = {
-    val hd = readTerm(buffer)
-    length match {
-      case 1 => readTerm(buffer) match {
-        case Nil => (hd :: Nil, None)
-        case improper => (hd :: Nil, Some(improper))
+    var i = 0
+    val b = new ArrayBuffer[Any](length)
+    while (i <= length) {
+      val term = readTerm(buffer)
+      if (i == length) {
+        term match {
+          case Nil => return (b.toList, None)
+          case improper => return (b.toList, Some(improper))
+        }
+      } else {
+        b += term
+        i += 1
       }
-      case _ => 
-        val (tail, improper) = readList(length-1, buffer)
-        (hd :: tail, improper)
     }
+    (b.toList, None)
   }
   
   def readTuple(arity : Int, buffer : ChannelBuffer) = {

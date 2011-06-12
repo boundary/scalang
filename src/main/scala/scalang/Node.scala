@@ -22,6 +22,8 @@ import scalang.util._
 import java.security.SecureRandom
 import com.codahale.logula.Logging
 import org.apache.log4j.Level
+import org.jboss.netty.logging._
+import netty.util.HashedWheelTimer
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
@@ -120,6 +122,9 @@ trait Node extends ClusterListener with ClusterPublisher {
   def spawnService[T <: Service](args : Any)(implicit mf : Manifest[T]) : Pid
   def spawnService[T <: Service](regName : String, args : Any)(implicit mf : Manifest[T]) : Pid
   def spawnService[T <: Service](regName : Symbol, args : Any)(implicit mf : Manifest[T]) : Pid
+  def spawn(fun : => Unit) : Pid
+  def spawn(regName : String, fun : => Unit) : Pid
+  def spawn(regName : Symbol, fun : => Unit) : Pid
   def spawnMbox : Mailbox
   def spawnMbox(regName : String) : Mailbox
   def spawnMbox(regName : Symbol) : Mailbox
@@ -132,6 +137,7 @@ trait Node extends ClusterListener with ClusterPublisher {
   def makeRef : Reference
   def isAlive(pid : Pid) : Boolean
   def shutdown
+  def timer : HashedWheelTimer
 }
 
 class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) extends Node 
@@ -140,6 +146,9 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     with LinkListener 
     with ReplyRegistry
     with Logging {
+  InternalLoggerFactory.setDefaultFactory(new Log4JLoggerFactory)
+  
+  val timer = new HashedWheelTimer
   val poolFactory = config.poolFactory
   var creation : Int = 0
   val processes = new NonBlockingHashMap[Pid,ProcessLike]
@@ -205,6 +214,50 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
   
   //node external interface
+  def spawn(fun : => Unit) : Pid = {
+    val n = this
+    val p = createPid
+    val ctx = new ProcessContext {
+      val pid = p
+      val referenceCounter = n.referenceCounter
+      val node = n
+      val fiber = factory.create(poolFactory.createBatchExecutor(false))
+      val replyRegistry = n
+    }
+    val process = new FunProcess(fun, ctx)
+    process.addExitListener(this)
+    process.addSendListener(this)
+    process.addLinkListener(this)
+    process.fiber.start
+    process.start
+    p
+  }
+  
+  def spawn(name : String, fun : => Unit) : Pid = {
+    spawn(Symbol(name), fun)
+  }
+  
+  def spawn(name : Symbol, fun : => Unit) : Pid = {
+    val n = this
+    val p = createPid
+    val ctx = new ProcessContext {
+      val pid = p
+      val referenceCounter = n.referenceCounter
+      val node = n
+      val fiber = factory.create(poolFactory.createBatchExecutor(name.name,false))
+      val replyRegistry = n
+    }
+    val process = new FunProcess(fun, ctx)
+    process.addExitListener(this)
+    process.addSendListener(this)
+    process.addLinkListener(this)
+    process.fiber.start
+    process.start
+    p
+    registeredNames.put(name, p)
+    p
+  }
+  
   def spawn[T <: Process](implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
     createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(false))

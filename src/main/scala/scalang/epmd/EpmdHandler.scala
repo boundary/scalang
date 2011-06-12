@@ -9,6 +9,7 @@ import netty.channel._
 import netty.handler.codec.frame._
 import scala.collection.JavaConversions._
 import com.codahale.logula.Logging
+import java.util.concurrent.TimeUnit
 
 class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
   val queue = new ConcurrentLinkedQueue[EpmdResponse]
@@ -19,21 +20,41 @@ class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
     call
   }
   
+  override def channelClosed(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
+    log.debug("Oh snap channel closed.")
+  }
+  
+  override def channelDisconnected(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
+    log.debug("Uh oh disconnect.")
+  }
+  
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
-    log.error(e.getCause, "Caught exception in epmd handler")
+    var rsp = queue.poll
+    while (rsp != null) {
+      rsp.setError(e.getCause)
+      rsp = queue.poll
+    }
   }
   
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
     val response = e.getMessage
-    for(rspCallable <- queue) {
-      rspCallable.set(response)
+    var rsp = queue.poll
+    while (rsp != null) {
+      rsp.set(response)
+      rsp = queue.poll
     }
-    queue.clear
   }
   
   class EpmdResponse extends Callable[Any] {
     val response = new AtomicReference[Any]
+    val error = new AtomicReference[Throwable]
     val lock = new CountDownLatch(1)
+    
+    def setError(t : Throwable) {
+      error.set(t)
+      lock.countDown
+      
+    }
     
     def set(v : Any) {
       response.set(v)
@@ -41,8 +62,15 @@ class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
     }
     
     def call : Any = {
-      lock.await
-      response.get
+      if (lock.await(500, TimeUnit.MILLISECONDS)) {
+        if (error.get != null) {
+          throw new Exception("EPMD Registration failed.", error.get)
+        } else {
+          response.get
+        }
+      } else {
+        throw new Exception("EPMD Registration timed out.")
+      }
     }
   }
 }

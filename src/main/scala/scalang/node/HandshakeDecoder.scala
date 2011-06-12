@@ -15,6 +15,10 @@ class HandshakeDecoder extends OneToOneDecoder {
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
     //dispatch on first byte
     val buffer = obj.asInstanceOf[ChannelBuffer]
+    if (!buffer.readable) {
+      return buffer
+    }
+    buffer.markReaderIndex
     (mode, buffer.readByte) match {
       case ('name, 110) => //name message
         val version = buffer.readShort
@@ -48,6 +52,9 @@ class HandshakeDecoder extends OneToOneDecoder {
         val bytes = new Array[Byte](digestLength)
         buffer.readBytes(bytes)
         ChallengeAckMessage(bytes)
+      case (_, _) => // overwhelmingly likely to be race between first message in and removal from pipeline
+        buffer.resetReaderIndex
+        buffer
     }
   }
   

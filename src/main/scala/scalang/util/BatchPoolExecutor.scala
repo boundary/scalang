@@ -12,9 +12,8 @@ class BatchPoolExecutor(path : String,
   keepAlive : Long,
   unit : TimeUnit,
   queue : BlockingQueue[Runnable],
-  factory : ThreadFactory,
-  handler : RejectedExecutionHandler) extends 
-    InstrumentedThreadPoolExecutor(path, name, coreSize, maxSize, keepAlive, unit, queue, factory, handler) with 
+  factory : ThreadFactory) extends 
+    InstrumentedThreadPoolExecutor(path, name, coreSize, maxSize, keepAlive, unit, queue, factory) with 
     BatchExecutor {
   
   override def execute(reader : EventReader) {

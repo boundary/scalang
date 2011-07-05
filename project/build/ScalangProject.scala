@@ -15,7 +15,7 @@ class ScalangProject(info : ProjectInfo) extends DefaultProject(info) {
   val logula = "com.codahale" %% "logula" % "2.1.2"
   val netty = "org.jboss.netty" % "netty" % "3.2.4.Final"
   val jetlang = "org.jetlang" % "jetlang" % "0.2.5"
-  val overlock = "com.boundary" %% "overlock" % "0.4"
+  val overlock = "com.boundary" %% "overlock" % "0.5"
   val specs = "org.scala-tools.testing" %% "specs" % "1.6.7" % "test"
   
   Credentials(Path.userHome / ".ivy2" / ".credentials-internal", log)

@@ -4,7 +4,13 @@ import scalang._
 import java.util.concurrent.TimeUnit
 import concurrent.forkjoin.LinkedTransferQueue
 
-class Mailbox(ctx : ProcessContext) extends ProcessLike {
+trait Mailbox extends ProcessLike {
+  def self : Pid
+  def receive : Any
+  def receive(timeout : Long) : Option[Any]
+}
+
+class MailboxProcess(ctx : ProcessContext) extends Mailbox {
   
   val referenceCounter = ctx.referenceCounter
   val self = ctx.pid

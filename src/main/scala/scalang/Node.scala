@@ -122,12 +122,30 @@ trait Node extends ClusterListener with ClusterPublisher {
   def spawnService[T <: Service](args : Any)(implicit mf : Manifest[T]) : Pid
   def spawnService[T <: Service](regName : String, args : Any)(implicit mf : Manifest[T]) : Pid
   def spawnService[T <: Service](regName : Symbol, args : Any)(implicit mf : Manifest[T]) : Pid
-  def spawn(fun : => Unit) : Pid
-  def spawn(regName : String, fun : => Unit) : Pid
-  def spawn(regName : Symbol, fun : => Unit) : Pid
+  def spawn(fun : Mailbox => Unit) : Pid
+  def spawn(regName : String, fun : Mailbox => Unit) : Pid
+  def spawn(regName : Symbol, fun : Mailbox => Unit) : Pid
   def spawnMbox : Mailbox
   def spawnMbox(regName : String) : Mailbox
   def spawnMbox(regName : Symbol) : Mailbox
+  def send(to : Pid, msg : Any)
+  def send(to : Symbol, msg : Any)
+  def send(to : (Symbol,Symbol), from : Pid, msg : Any)
+  def call(to : Pid, msg : Any) : Any
+  def call(to : Pid, msg : Any, timeout : Long) : Any
+  def call(from : Pid, to : Pid, msg : Any) : Any
+  def call(from : Pid, to : Pid, msg : Any, timeout : Long) : Any
+  def call(to : Symbol, msg : Any) : Any
+  def call(to : Symbol, msg : Any, timeout : Long) : Any
+  def call(from : Pid, to : Symbol, msg : Any) : Any
+  def call(from : Pid, to : Symbol, msg : Any, timeout : Long) : Any
+  def call(to : (Symbol,Symbol), msg : Any) : Any
+  def call(to : (Symbol,Symbol), msg : Any, timeout : Long) : Any
+  def call(from : Pid, to : (Symbol,Symbol), msg : Any) : Any
+  def call(from : Pid, to : (Symbol,Symbol), msg : Any, timeout : Long) : Any
+  def cast(to : Pid, msg : Any)
+  def cast(to : Symbol, msg : Any)
+  def cast(to : (Symbol,Symbol), msg : Any)
   def register(regName : String, pid : Pid)
   def register(regName : Symbol, pid : Pid)
   def getNames : Set[Symbol]
@@ -186,7 +204,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   def spawnMbox : Mailbox = {
     val p = createPid
     val n = this
-    val box = new Mailbox(new ProcessContext {
+    val box = new MailboxProcess(new ProcessContext {
       val pid = p
       val referenceCounter = n.referenceCounter
       val node = n
@@ -214,7 +232,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
   
   //node external interface
-  def spawn(fun : => Unit) : Pid = {
+  def spawn(fun : Mailbox => Unit) : Pid = {
     val n = this
     val p = createPid
     val ctx = new ProcessContext {
@@ -233,11 +251,11 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     p
   }
   
-  def spawn(name : String, fun : => Unit) : Pid = {
+  def spawn(name : String, fun : Mailbox => Unit) : Pid = {
     spawn(Symbol(name), fun)
   }
   
-  def spawn(name : Symbol, fun : => Unit) : Pid = {
+  def spawn(name : Symbol, fun : Mailbox => Unit) : Pid = {
     val n = this
     val p = createPid
     val ctx = new ProcessContext {
@@ -434,19 +452,72 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   def send(to : Symbol, msg : Any) = handleSend(to, msg)
   def send(to : (Symbol,Symbol), from : Pid, msg : Any) = handleSend(to, from, msg)
   
+  def call(to : Pid, msg : Any) : Any = call(createPid, to, msg)
+  def call(to : Pid, msg : Any, timeout : Long) : Any = call(createPid, to, msg, timeout)
+  def call(from : Pid, to : Pid, msg : Any) : Any = call(from, to, msg, Long.MaxValue)
+  def call(from : Pid, to : Pid, msg : Any, timeout : Long) : Any = {
+    val (ref,c) = makeCall(from, msg)
+    val channel = makeReplyChannel(from, ref)
+    send(to, c)
+    waitReply(channel, timeout)
+  }
+  
+  def call(to : Symbol, msg : Any) : Any = call(createPid, to, msg)
+  def call(to : Symbol, msg : Any, timeout : Long) : Any = call(createPid, to, msg, timeout)
+  def call(from : Pid, to : Symbol, msg : Any) : Any = call(from, to, msg, Long.MaxValue)
+  def call(from : Pid, to : Symbol, msg : Any, timeout : Long) : Any = {
+    val (ref,c) = makeCall(from, msg)
+    val channel = makeReplyChannel(from, ref)
+    send(to, c)
+    waitReply(channel, timeout)
+  }
+  
+  def call(to : (Symbol,Symbol), msg : Any) = call(createPid, to, msg)
+  def call(to : (Symbol,Symbol), msg : Any, timeout : Long) = call(createPid, to, msg, timeout)
+  def call(from : Pid, to : (Symbol,Symbol), msg : Any) = call(from, to, msg, Long.MaxValue)
+  def call(from : Pid, to : (Symbol,Symbol), msg : Any, timeout : Long) : Any = {
+    val (ref,c) = makeCall(from, msg)
+    val channel = makeReplyChannel(from, ref)
+    send(to, from, c)
+    waitReply(channel, timeout)
+  }
+  
+  def cast(to : Pid, msg : Any) = send(to, (Symbol("$gen_cast"), msg))
+  def cast(to : Symbol, msg : Any) = send(to, (Symbol("$gen_cast"), msg))
+  def cast(to : (Symbol,Symbol), msg : Any) = send(to, createPid, (Symbol("$gen_cast"), msg))
+  
+  def makeReplyChannel(pid : Pid, ref : Reference) : BlockingQueue[Any] = {
+    val queue = new LinkedBlockingQueue[Any]
+    registerReplyQueue(pid, ref, queue)
+    queue
+  }
+  
+  def waitReply(channel : BlockingQueue[Any], timeout : Long) : Any = {
+    channel.poll(timeout, TimeUnit.MILLISECONDS) match {
+      case null => ('error, 'timeout)
+      case response => response
+    }
+  }
+  
+  def makeCall(from : Pid, msg : Any) : (Reference,Any) = {
+    val ref = makeRef
+    val call = (Symbol("$gen_call"), (from, ref), msg)
+    (ref, call)
+  }
+  
   def handleSend(to : Pid, msg : Any) {
     log.debug("send %s to %s", msg, to)
-    if (isLocal(to)) {
-      val process = processes.get(to)
-      log.debug("send local to %s", process)
-      if (process != null) {
-        if (!tryDeliverReply(to,msg)) {
+    if (!tryDeliverReply(to,msg)) {
+      if (isLocal(to)) {
+        val process = processes.get(to)
+        log.debug("send local to %s", process)
+        if (process != null) {
           process.handleMessage(msg)
         }
+      } else {
+        log.debug("send remote to %s", to.node)
+        getOrConnectAndSend(to.node, SendMessage(to, msg))
       }
-    } else {
-      log.debug("send remote to %s", to.node)
-      getOrConnectAndSend(to.node, SendMessage(to, msg))
     }
   }
   

@@ -53,50 +53,15 @@ abstract class Service(ctx : ProcessContext) extends Process(ctx) {
       handleInfo(msg)
   }
   
-  def makeCall(msg : Any) : (Reference,Any) = {
-    val ref = makeRef
-    val call = (Symbol("$gen_call"), (self, ref), msg)
-    (ref, call)
-  }
+  def call(to : Pid, msg : Any) : Any = node.call(self,to,msg)
+  def call(to : Pid, msg : Any, timeout : Long) : Any = node.call(self,to,msg,timeout)
+  def call(to : Symbol, msg : Any) : Any = node.call(self,to,msg)
+  def call(to : Symbol, msg : Any, timeout : Long) : Any = node.call(self,to,msg,timeout)
+  def call(to : (Symbol,Symbol), msg : Any) : Any = node.call(self,to,msg)
+  def call(to : (Symbol,Symbol), msg : Any, timeout : Long) : Any = node.call(self,to,msg,timeout)
   
-  def waitReply(ref : Reference, timeout : Long) : Any = {
-    val queue = new LinkedBlockingQueue[Any]
-    replyRegistry.registerReplyQueue(self, ref, queue)
-    val response = queue.poll(timeout, TimeUnit.MILLISECONDS)
-    if (null == response) {
-      ('error, 'timeout)
-    } else {
-      response
-    }
-  }
+  def cast(to : Pid, msg : Any) = node.cast(to,msg)
+  def cast(to : Symbol, msg : Any) = node.cast(to,msg)
+  def cast(to : (Symbol,Symbol), msg : Any) = node.cast(to,msg)
   
-  def call(service : Pid, msg : Any) : Any = {
-    call(service, msg, Long.MaxValue)
-  }
-  
-  def call(service : Pid, msg : Any, timeout : Long) : Any = {
-    val (ref, c) = makeCall(msg)
-    service ! c
-    waitReply(ref,timeout)
-  }
-  
-  def call(service : Symbol, msg : Any) : Any = {
-    call(service, msg, Long.MaxValue)
-  }
-  
-  def call(service : Symbol, msg : Any, timeout : Long) : Any = {
-    val (ref, c) = makeCall(msg)
-    service ! c
-    waitReply(ref,timeout)
-  }
-  
-  def call(service : (Symbol,Symbol), msg : Any) : Any = {
-    call(service, msg, Long.MaxValue)
-  }
-  
-  def call(service : (Symbol,Symbol), msg : Any, timeout : Long) : Any = {
-    val (ref, c) = makeCall(msg)
-    service ! c
-    waitReply(ref,timeout)
-  }
 }

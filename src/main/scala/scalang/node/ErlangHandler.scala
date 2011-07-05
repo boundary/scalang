@@ -16,7 +16,7 @@ class ErlangHandler(
   @volatile var peer : Symbol = null
   
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
-    log.error(e.getCause, "error caught in erlang handler")
+    log.error(e.getCause, "error caught in erlang handler %s", peer)
     ctx.getChannel.close
   }
   

@@ -35,6 +35,28 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
     }
   }
 
+/*  def spawn[T <: Process](implicit mf : Manifest[T]) : Pid = node.spawn[T](mf)
+  def spawn[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid = node.spawn[T](regName)(mf)
+  def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid = node.spawn[T](regName)(mf)
+  
+  def spawnLink[T <: Process](implicit mf : Manifest[T]) : Pid = {
+    val pid = node.spawn[T](mf)
+    link(pid)
+    pid
+  }
+  
+  def spawnLink[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid = {
+    val pid = node.spawn[T](regName)(mf)
+    link(pid)
+    pid
+  }
+  
+  def spawnLink[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid = {
+    val pid = node.spawn[T](regName)(mf)
+    link(pid)
+    pid
+  }*/
+
   val links = new NonBlockingHashSet[Link]
   
   def link(to : Pid) {

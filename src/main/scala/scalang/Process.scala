@@ -13,6 +13,7 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging {
   val fiber = ctx.fiber
   val referenceCounter = ctx.referenceCounter
   val replyRegistry = ctx.replyRegistry
+  val node = ctx.node
   
   implicit def pid2sendable(pid : Pid) = new PidSend(pid,this)
   implicit def sym2sendable(to : Symbol) = new SymSend(to,this)

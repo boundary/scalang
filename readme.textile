@@ -1,10 +1,12 @@
 h1. Introduction
 
-Scalang is a message passing and actor library that allows Scala and Erlang applications to easily communicate.  Scalang is a full implementation of the Erlang distributed node protocol.  Scalang provides an actor oriented API that can be used to interact with Erlang nodes in an idiomatic, OTP compliant way.  Scalang is built on Netty for its networking layer and Jetlang for its actor implementation.
+Scalang is a message passing and actor library that allows Scala and Erlang applications to easily communicate.  Scalang includes a full implementation of the Erlang distributed node protocol.  It provides an actor oriented API that can be used to interact with Erlang nodes in an idiomatic, OTP compliant way.  Scalang is built on Netty for its networking layer and Jetlang for its actor implementation.
 
 h1. Usage
 
-Most of Scalang's functionality is accessible through its Node object. Scalang nodes can be started like so:
+h2. Starting
+
+The main entry point for Scalang's API is the node class.  An instantiation of the Node class is a self contained representation of an Erlang Node, distinct in the set of nodes participating in a distributed system.  Multiple Nodes may be run within the same JVM.  Start a node with the following invocation:
 
 <pre>
 <code>
@@ -12,6 +14,129 @@ Most of Scalang's functionality is accessible through its Node object. Scalang n
 </code>
 </pre>
 
-Starting a Scalang node like this will register it with the local "epmd":http://erlang.org/doc/man/epmd.html instance, which must be running on the local host.  Scalang will then be available to receive and make connections to other Erlang nodes.  In this case, its node name would be <code>scala@localhost.local</code> and its magic cookie is @cookie@.  Any Erlang or Scalang node which shares this magic cookie can now connect to this node and send messages using the node name.
+Starting a Scalang node like this will register it with the local "epmd":http://erlang.org/doc/man/epmd.html instance, which must be running on the local host.  Scalang will then be available to receive and make connections to other Erlang nodes.  In this case, its node name would be scala@localhost.local and its magic cookie is @cookie@.  Any Erlang or Scalang node which shares this magic cookie can now connect to this node and send messages using the node name.
 
-Messages can be delivered to and sent from _processes_.  A process, in Erlang terminology, is a lightweight actor that shares no memory with any other process.  Scalang comes equipped with an actor library engineered to behave very much like Erlang's processes.
+h2. Processes
+
+Scalang shares Erlang's concept of a Process, a lightweight actor that is capable of sending messages to other processes, either local or remote.  You can define your own processes by subclassing the Process class.  The following code defines and then spawns a process:
+
+<pre>
+<code>
+  class MyProcess(ctx : ProcessContext) extends Process(ctx) {
+    override def onMessage(msg : Any) {
+      log.info("received %s", msg)
+    }
+  }
+  
+  val pid = node.spawn[MyProcess]
+</code>
+</pre>
+
+The val pid is process ID.  It is a handle that can be used to send messages and control signals to the spawned process.  Pids can refer to both local and remote processes.
+
+h2. Message Passing
+
+Message passing / receiving is the main means by which processes may interact with the outside world.  Processes receive messages via the message handler method onMessage.  Only one message may be handled by a process at a time unless that process has been spawned with the reentrant option.
+
+Messages may either be sent to a pid or a registered name.  The following shows a simple echo server and client that demonstrate message sending.
+
+<pre>
+<code>
+  class EchoServer(ctx : ProcessContext) extends Process(ctx) {
+    override def onMessage(msg : Any) = msg match {
+      case (pid : Pid, request : Any) =>
+        pid ! request
+      case m =>
+        log.error("sorry I don't understand %s.", m)
+    }
+  }
+
+
+  val server = node.spawn[EchoServer]
+  val client = node.spawn { mbox =>
+    mbox.send(server, (client,'derp))
+    val received = mbox.receive
+    println("received " + received)
+  }
+</code>
+</pre>
+
+h2. Error Handling
+
+Scalang implements the Erlang concept of links.  A link is a bidirectional relationship between two processes.  If one of the processes exits the link will break and the other process will receive an exit notification.  The default behavior of a process during exit notification is for the receiving process to exit with the same error message that was delivered with the link breakage.  Creating a link between two processes requires both Pids.
+
+<pre>
+<code>
+  
+
+Processes that must implement custom behavior may override the trapExit method.
+
+<pre>
+<code>
+  class ExitHandler(ctx : ProcessContext) extends Process(ctx) {
+    override def onMessage(msg : Any) = msg match {
+      case _ => log.info("derp %s", msg)
+    }
+    
+    override def trapExit(from : Pid, msg : Any) {
+      log.warning("got exit notification from %s reason %s", from, msg)
+    }
+  }
+</code>
+</pre>
+
+h2. Serialization
+
+Scalang messages are serialized into "Erlang's external term format":http://www.erlang.org/doc/apps/erts/erl_ext_dist.html.  Serialization automatically happens when messages are either sent from or received by a Scalang process.  For the most part Scalang provides a 1-1 mapping of Erlangs terms onto Scala types.  The type mappings are illustrated below.
+
+| From Erlang | To Scala |
+| Small Integer | Int |
+| Integer | Int |
+| Float | Double |
+| Boolean | Boolean |
+| Atom | Symbol |
+| Reference | Custom Type |
+| Port | Custom Type |
+| Pid | Custom Type |
+| Small Tuple | Tuple |
+| Large Tuple | Custom Type |
+| String | String |
+| List | List |
+| Binary | ByteBuffer |
+| Small Bignum | Long |
+| Large Bignum | BigInt |
+| Fun | Custom Type |
+| Bistring | Custom Type |
+
+| From Scala | to Erlang |
+| Byte | Small Integer |
+| Int | Integer |
+| Long | Small Bignum |
+| Double | Float |
+| Symbol | Atom |
+| Reference | Reference |
+| Port | Port |
+| Pid | Pid |
+| Fun | Fun |
+| String | String |
+| List | List |
+| BigInteger | Large Bignum |
+| Array[Byte] | Binary |
+| ByteBuffer | Binary |
+| BitString | Bitstring |
+| Tuple | Tuple |
+| BigTuple | Tuple |
+
+h2. Complex Type Mappings
+
+Sometimes the built-in type mappings in Scalang are not sufficient for an application's message format.  Scalang provides the TypeFactory trait for client code to provide custom decoding behavior.
+
+<pre>
+<code>
+  trait TypeFactory {
+    def createType(name : Symbol, arity : Int, reader : TermReader) : Option[Any]
+  }
+</code>
+<pre>
+  
+  

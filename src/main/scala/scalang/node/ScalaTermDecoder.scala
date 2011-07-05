@@ -52,7 +52,7 @@ class ScalaTermDecoder(factory : TypeFactory) extends OneToOneDecoder with Instr
   }
   
   def readTerm(buffer : ChannelBuffer) : Any = {
-    buffer.readByte match {
+    buffer.readUnsignedByte match {
       case 131 => //version derp
         readTerm(buffer)
       case 97 => //small integer

@@ -97,13 +97,17 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
       writeBigInt(buffer, b)
     case a : Array[Byte] =>
       writeBinary(buffer, a)
+    case b : ByteBuffer =>
+      writeBinary(buffer, b)
+    case BitString(b, i) =>
+      writeBinary(buffer, b, i)
     case b : BigTuple =>
       writeBigTuple(buffer, b)
     case p : Product =>
       writeProduct(buffer, p)
   }
   
-  def writeByteBuffer(buffer : ChannelBuffer, b : ByteBuffer) {
+  def writeBinary(buffer : ChannelBuffer, b : ByteBuffer) {
     val length = b.remaining
     buffer.writeByte(109)
     buffer.writeInt(length)
@@ -115,6 +119,14 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
     buffer.writeByte(109)
     buffer.writeInt(length)
     buffer.writeBytes(a)
+  }
+  
+  def writeBinary(buffer : ChannelBuffer, b : ByteBuffer, i : Int) {
+    val length = b.remaining
+    buffer.writeByte(77)
+    buffer.writeInt(length)
+    buffer.writeByte(i)
+    buffer.writeBytes(b)
   }
   
   def writeLong(buffer : ChannelBuffer, l : Long) {

@@ -231,7 +231,7 @@ class ScalaTermDecoder(factory : TypeFactory) extends OneToOneDecoder with Instr
     readTerm(buffer) match {
       case name : Symbol =>
         val reader = new TermReader(buffer, this)
-        factory.createType(name, arity-1, reader) match {
+        factory.createType(name, arity, reader) match {
           case Some(obj) => obj
           case None =>
             readVanillaTuple(name, arity, buffer)

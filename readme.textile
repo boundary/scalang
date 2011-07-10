@@ -127,16 +127,32 @@ Scalang messages are serialized into "Erlang's external term format":http://www.
 | Tuple | Tuple |
 | BigTuple | Tuple |
 
-h2. Complex Type Mappings
+h2. Rich Type Mappings
 
-Sometimes the built-in type mappings in Scalang are not sufficient for an application's message format.  Scalang provides the TypeFactory trait for client code to provide custom decoding behavior.
+Sometimes the built-in type mappings in Scalang are not sufficient for an application's message format.  Scalang provides the TypeFactory trait for client code to provide custom decoding behavior.  A TypeFactory is invoked when Scalang comes across a term that looks like an erlang record: a tuple where the first element is an atom.  The createType method is called with the first tuple element as the name and the arity of the tuple.  
 
 <pre>
 <code>
-  trait TypeFactory {
-    def createType(name : Symbol, arity : Int, reader : TermReader) : Option[Any]
+  object StructFactory extends TypeFactory {
+    def createType(name : Symbol, arity : Int, reader : TermReader) : Option[Seq[Any]] = { 
+      try {
+        reader.mark
+        (name,arity) match {
+          case ('struct,2) => Some(readMap(reader))
+          case _ => None
+        }
+      }
+    }
+    
+    protected def readSeq(reader : TermReader) : Map[Symbol,Any] = {
+      val proplist = reader.readAs[List[Symbol,Any]]
+      proplist.toMap
+    }
   }
+  
+  val node = Node("test", cookie, NodeConfig(
+    typeFactory = StructFactory))
 </code>
 <pre>
   
-  
+The above code will spawn a Scalang node that uses the StructFactory singleton to decode into a map any arity 2 tuples that begin with the atom `struct`.  Anything else will get decoded with the normal type mappings.

@@ -89,7 +89,7 @@ h2. Serialization
 
 Scalang messages are serialized into "Erlang's external term format":http://www.erlang.org/doc/apps/erts/erl_ext_dist.html.  Serialization automatically happens when messages are either sent from or received by a Scalang process.  For the most part Scalang provides a 1-1 mapping of Erlangs terms onto Scala types.  The type mappings are illustrated below.
 
-| From Erlang | To Scala |
+| <b>From Erlang</b> | <b>To Scala</b> |
 | Small Integer | Int |
 | Integer | Int |
 | Float | Double |
@@ -108,7 +108,7 @@ Scalang messages are serialized into "Erlang's external term format":http://www.
 | Fun | Custom Type |
 | Bistring | Custom Type |
 
-| From Scala | to Erlang |
+| <b>From Scala</b> | <b>To Erlang</b> |
 | Byte | Small Integer |
 | Int | Integer |
 | Long | Small Bignum |
@@ -153,6 +153,40 @@ Sometimes the built-in type mappings in Scalang are not sufficient for an applic
   val node = Node("test", cookie, NodeConfig(
     typeFactory = StructFactory))
 </code>
-<pre>
-  
+</pre>
+
 The above code will spawn a Scalang node that uses the StructFactory singleton to decode into a map any arity 2 tuples that begin with the atom `struct`.  Anything else will get decoded with the normal type mappings.
+
+h2. Services
+
+Most modern Erlang applications are built using the OTP framework, and in particular the "gen_server":http://www.erlang.org/doc/design_principles/gen_server_concepts.html.  In order to more effectively interface with gen_server based processes, Scalang has a special kind of process known as a service.  Services respond to casts and calls like a gen_server and allow you to send casts and calls to gen_servers running in an Erlang VM.
+
+<pre>
+<code>
+  class EchoService(ctx : ProcessContext) extends Service(ctx) {
+    
+    var name : String = null
+    
+    override def init(args : Any) = args match {
+      case n : String => name = n
+    }
+    
+    override def handleCall(from : Pid, request : Any) : Any = {
+      name + " " + request
+    }
+    
+    override def handleCast(request : Any) {
+      log.info("Can't echo a cast. %s", request)
+    }
+    
+    override def handleInfo(request : Any) {
+      log.info("A wild message appeared. %s, request")
+    }
+  }
+  
+  val node = Node("test", cookie)
+  val pid = node.spawnService[EchoService]("echo", "test_echo")
+</code>
+</pre>
+
+This will spawn a new process with the registered name "echo" and it will be initialized with the argument "test_echo".  The handleCall method will automatically send its return value to the caller.  Casts are meant to be one directional, therefore the return value of handleCast is discarded.  The handleInfo method is invoked when a message shows up without the appropriate call or cast semantics.

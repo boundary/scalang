@@ -2,6 +2,41 @@ h1. Introduction
 
 Scalang is a message passing and actor library that allows Scala and Erlang applications to easily communicate.  Scalang includes a full implementation of the Erlang distributed node protocol.  It provides an actor oriented API that can be used to interact with Erlang nodes in an idiomatic, OTP compliant way.  Scalang is built on Netty for its networking layer and Jetlang for its actor implementation.
 
+h1. Installation
+
+From SBT:
+
+<pre>
+<code>
+  val boundaryPublic = "Boundary Public Repo" at "http://maven.boundary.com/artifactory/repo"
+  
+  val scalang = "com.boundary" %% "scalang" % "0.6"
+</code>
+</pre>
+
+From Maven:
+
+<pre>
+<code>
+  <repositories>
+    <repository>
+      <id>Boundary Public Repo</id>
+      <url>http://maven.boundary.com/artifactory/repo</url>
+    </repository>
+  </repositories>
+  
+  <dependencies>
+    <dependency>
+      <groupId>com.boundary</groupId>
+      <artifactId>scalang_2.8.1</artifactId>
+      <version>0.6</version>
+    </dependency>
+  </dependencies>
+</code>
+</pre>
+
+Scalang currently supports Scala 2.8.1.
+
 h1. Usage
 
 h2. Starting

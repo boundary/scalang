@@ -16,7 +16,6 @@
 package scalang
 
 import node._
-import OtpConversions._
 import org.jetlang._
 import channels._
 import core._

@@ -6,6 +6,7 @@ import org.jboss.netty._
 import handler.codec.embedder._
 import java.nio._
 import buffer.ChannelBuffers._
+import scalang.util._
 
 class ScalaTermDecoderSpec extends Specification {
   "ScalaTermDecoder" should {

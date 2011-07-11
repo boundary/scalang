@@ -33,10 +33,10 @@ class CaseClassFactory(searchPrefixes : Seq[String], typeMappings : Map[String,C
    * Arity is the length of the tuple after the header
    */
   protected def tryCreateInstance(reader : TermReader, clazz : Class[_], arity : Int) : Option[Any] = {
-    val candidates = for (constructor <- clazz.getConstructors if constructor.getParameterTypes.length == arity) yield {constructor}
+    val candidates = for (constructor <- clazz.getConstructors if constructor.getParameterTypes.length == arity-1) yield {constructor}
     if (candidates.isEmpty) return None 
     reader.mark
-    val parameters = for (i <- (0 until arity)) yield { reader.readTerm }
+    val parameters = for (i <- (1 until arity)) yield { reader.readTerm }
     val classes = parameters.map { case param : AnyRef =>
       param.getClass
     }

@@ -6,7 +6,7 @@ h1. Usage
 
 h2. Starting
 
-The main entry point for Scalang's API is the node class.  An instantiation of the Node class is a self contained representation of an Erlang Node, distinct in the set of nodes participating in a distributed system.  Multiple Nodes may be run within the same JVM.  Start a node with the following invocation:
+The main entry point for Scalang's API is the node class.  An instance of the Node class is a self contained representation of an Erlang Node, distinct in the set of nodes participating in a distributed system.  Multiple nodes may be run within the same JVM.  Start a node with the following invocation:
 
 <pre>
 <code>
@@ -18,7 +18,7 @@ Starting a Scalang node like this will register it with the local "epmd":http://
 
 h2. Processes
 
-Scalang shares Erlang's concept of a Process, a lightweight actor that is capable of sending messages to other processes, either local or remote.  You can define your own processes by subclassing the Process class.  The following code defines and then spawns a process:
+Scalang shares Erlang's concept of a process, a lightweight actor that is capable of sending messages to other processes, either local or remote.  You can define your own processes by subclassing the Process class.  The following code defines and then spawns a process:
 
 <pre>
 <code>
@@ -28,17 +28,21 @@ Scalang shares Erlang's concept of a Process, a lightweight actor that is capabl
     }
   }
   
-  val pid = node.spawn[MyProcess]
+  val pid = node.spawn[MyProcess]("my_process")
+  
+  //send to the pid
+  node.send(pid, "hey there")
+  
+  //send to the regname
+  node.send("my_process", "you wanna party?")
 </code>
 </pre>
-
-The val pid is process ID.  It is a handle that can be used to send messages and control signals to the spawned process.  Pids can refer to both local and remote processes.
 
 h2. Message Passing
 
 Message passing / receiving is the main means by which processes may interact with the outside world.  Processes receive messages via the message handler method onMessage.  Only one message may be handled by a process at a time unless that process has been spawned with the reentrant option.
 
-Messages may either be sent to a pid or a registered name.  The following shows a simple echo server and client that demonstrate message sending.
+The following shows a simple echo server and client that demonstrate message sending.
 
 <pre>
 <code>
@@ -52,7 +56,8 @@ Messages may either be sent to a pid or a registered name.  The following shows 
   }
 
 
-  val server = node.spawn[EchoServer]
+  val server = node.spawn[EchoServer]("echo_server")
+  
   val client = node.spawn { mbox =>
     mbox.send(server, (client,'derp))
     val received = mbox.receive
@@ -61,13 +66,22 @@ Messages may either be sent to a pid or a registered name.  The following shows 
 </code>
 </pre>
 
-h2. Error Handling
-
-Scalang implements the Erlang concept of links.  A link is a bidirectional relationship between two processes.  If one of the processes exits the link will break and the other process will receive an exit notification.  The default behavior of a process during exit notification is for the receiving process to exit with the same error message that was delivered with the link breakage.  Creating a link between two processes requires both Pids.
+Messages can also easily be passed from a remote node.  Scalang supports Erlang's convention of addressing messages to the tuple of a registered name and a node name.
 
 <pre>
 <code>
-  
+  val remoteNode = Node("remote", cookie)
+  val client = node.spawn { mbox =>
+    mbox.send(('echo_server, Symbol("test@localhost")), "heyo!")
+  }
+</code>
+</pre>
+
+The above code will send a message to the process registered as "echo_server" on the node named "test@localhost".
+
+h2. Error Handling
+
+Scalang implements the Erlang concept of links.  A link is a bidirectional relationship between two processes.  If one of the processes exits the link will break and the other process will receive an exit notification.  The default behavior of a process during exit notification is for the receiving process to exit with the same error message that was delivered with the link breakage.  Creating a link between two processes requires both pids.
 
 Processes that must implement custom behavior may override the trapExit method.
 
@@ -95,18 +109,18 @@ Scalang messages are serialized into "Erlang's external term format":http://www.
 | Float | Double |
 | Boolean | Boolean |
 | Atom | Symbol |
-| Reference | Custom Type |
-| Port | Custom Type |
-| Pid | Custom Type |
+| Reference | "Reference":https://github.com/boundary/scalang/blob/master/src/main/scala/scalang/Reference.scala |
+| Port | "Port":https://github.com/boundary/scalang/blob/master/src/main/scala/scalang/Port.scala |
+| Pid | "Pid":https://github.com/boundary/scalang/blob/master/src/main/scala/scalang/Pid.scala |
 | Small Tuple | Tuple |
-| Large Tuple | Custom Type |
+| Large Tuple | "BigTuple":https://github.com/boundary/scalang/blob/master/src/main/scala/scalang/BigTuple.scala |
 | String | String |
 | List | List |
-| Binary | ByteBuffer |
+| Binary | "ByteBuffer":http://download.oracle.com/javase/6/docs/api/java/nio/ByteBuffer.html |
 | Small Bignum | Long |
 | Large Bignum | BigInt |
-| Fun | Custom Type |
-| Bistring | Custom Type |
+| Fun | "Fun":https://github.com/boundary/scalang/blob/master/src/main/scala/scalang/Fun.scala |
+| Bistring | "Bitstring":https://github.com/boundary/scalang/blob/master/src/main/scala/scalang/BitString.scala |
 
 | <b>From Scala</b> | <b>To Erlang</b> |
 | Byte | Small Integer |
@@ -155,7 +169,7 @@ Sometimes the built-in type mappings in Scalang are not sufficient for an applic
 </code>
 </pre>
 
-The above code will spawn a Scalang node that uses the StructFactory singleton to decode into a map any arity 2 tuples that begin with the atom `struct`.  Anything else will get decoded with the normal type mappings.
+The above code will spawn a Scalang node that uses the StructFactory singleton to decode into a map any arity 2 tuples that begin with the atom @struct@.  Anything else will get decoded with the normal type mappings.
 
 h2. Services
 
@@ -190,3 +204,17 @@ Most modern Erlang applications are built using the OTP framework, and in partic
 </pre>
 
 This will spawn a new process with the registered name "echo" and it will be initialized with the argument "test_echo".  The handleCall method will automatically send its return value to the caller.  Casts are meant to be one directional, therefore the return value of handleCast is discarded.  The handleInfo method is invoked when a message shows up without the appropriate call or cast semantics.
+
+h1. Roadmap
+
+h2. Upgrade Node Protocol
+
+Scalang uses the same version of Erlang's node protocol as JInterface.  This means that for some operations Scalang nodes are not treated as full fledged members of the cluster.  For instance, features like monitors and atom caches are not currently supported.  Additionally, Scalang nodes will appear as "hidden nodes":http://www.erlang.org/doc/reference_manual/distributed.html#id82462.  This is disadvantageous for Scalang's goal of transparent interoperability.
+
+h2. Supervision Trees
+
+Scalang needs its own implementation of Erlang OTP's supervision tree.  All of the primitives are in place to support supervision trees currently, so an implementation of the actual supervisor process is all that's needed.
+
+h2. Pre-emptable Actors
+
+Scalang uses Jetlang's thread pool based actor implementation.  There is currently no API for pre-empting these types of Jetlang actors.  Therefore either Jetlang needs to be patched to allow this or another actor backend needs to be chosen.

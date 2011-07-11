@@ -39,7 +39,9 @@ abstract class Service(ctx : ProcessContext) extends Process(ctx) {
   /**
    * Handle any messages that do not fit the call or cast pattern.
    */
-  def handleInfo(request : Any)
+  def handleInfo(request : Any) {
+    throw new Exception(getClass + " did not define an info handler.")
+  }
   
   override def onMessage(msg : Any) = msg match {
     case ('ping, from : Pid, ref : Reference) =>

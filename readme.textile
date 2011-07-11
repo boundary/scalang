@@ -171,6 +171,8 @@ Sometimes the built-in type mappings in Scalang are not sufficient for an applic
 
 The above code will spawn a Scalang node that uses the StructFactory singleton to decode into a map any arity 2 tuples that begin with the atom @struct@.  Anything else will get decoded with the normal type mappings.
 
+A more complex example is the "CaseClassFactory":https://github.com/boundary/scalang/blob/master/src/main/scala/scalang/node/CaseClassFactory.scala.  It will attempt to decode Erlang records into Scala "case classes":http://www.scala-lang.org/node/107 reflectively.
+
 h2. Services
 
 Most modern Erlang applications are built using the OTP framework, and in particular the "gen_server":http://www.erlang.org/doc/design_principles/gen_server_concepts.html.  In order to more effectively interface with gen_server based processes, Scalang has a special kind of process known as a service.  Services respond to casts and calls like a gen_server and allow you to send casts and calls to gen_servers running in an Erlang VM.

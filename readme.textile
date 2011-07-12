@@ -35,7 +35,7 @@ From Maven:
 </code>
 </pre>
 
-Scalang currently supports Scala 2.8.1.
+Scalang currently supports Scala 2.8.1.  Scalang also requires "epmd":http://www.erlang.org/doc/man/epmd.html in order to run.
 
 h1. Usage
 

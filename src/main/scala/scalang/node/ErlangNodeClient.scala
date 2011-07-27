@@ -28,6 +28,7 @@ import socket.nio.NioClientSocketChannelFactory
 
 class ErlangNodeClient(
     node : ErlangNode,
+    peer : Symbol,
     host : String,
     port : Int,
     control : Option[Any], 
@@ -68,7 +69,7 @@ class ErlangNodeClient(
           channel.write(c)
         }
       } else {
-        f.getCause.printStackTrace
+        node.disconnected(peer)
       }
     }
   })

@@ -178,6 +178,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     with SendListener 
     with LinkListener 
     with ReplyRegistry
+    with Instrumented
     with Logging {
   InternalLoggerFactory.setDefaultFactory(new Log4JLoggerFactory)
   
@@ -637,7 +638,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       val hostname = splitHostname(peer).getOrElse(throw new ErlangNodeException("Cannot resolve peer with no hostname: " + peer.name))
       val peerName = splitNodename(peer)
       val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
-      val client = new ErlangNodeClient(this, hostname, port, msg, config.typeFactory, afterHandshake)
+      val client = new ErlangNodeClient(this, peer, hostname, port, msg, config.typeFactory, afterHandshake)
     } catch {
       case e : Exception =>
         log.debug(e, "Exception in connect and send.")

@@ -64,6 +64,8 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
   
   override def channelClosed(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     this.ctx = ctx
+    log.error("Channel closed during handshake")
+    handshakeFailed
   }
   
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
@@ -116,6 +118,7 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
     for (name <- List("handshakeFramer", "handshakeDecoder", "handshakeEncoder", "handshakeHandler"); if keys.contains(name)) {
       p.remove(name)
     }
+    p.addFirst("packetCounter", new PacketCounter("connections." + peer.name.replaceAll("@", "_at_").replaceAll("\\.", "_")))
     for (msg <- messages) {
       ctx.sendDownstream(msg)
     }

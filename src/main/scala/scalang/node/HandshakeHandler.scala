@@ -118,7 +118,10 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
     for (name <- List("handshakeFramer", "handshakeDecoder", "handshakeEncoder", "handshakeHandler"); if keys.contains(name)) {
       p.remove(name)
     }
-    p.addFirst("packetCounter", new PacketCounter("connections." + peer.name.replaceAll("@", "_at_").replaceAll("\\.", "_")))
+    p.addFirst("packetCounter", new PacketCounter("stream-" + peer.name))
+    p.addAfter("encoderFramer", "framedCounter", new PacketCounter("framed-" + peer.name))
+    p.addAfter("erlangEncoder", "erlangCounter", new PacketCounter("erlang-" + peer.name))
+    
     for (msg <- messages) {
       ctx.sendDownstream(msg)
     }

@@ -25,8 +25,8 @@ import scalang._
 import com.yammer.metrics._
 import scala.collection.mutable.ArrayBuffer
 
-class ScalaTermDecoder(factory : TypeFactory) extends OneToOneDecoder with Instrumented {
-  val decodeTimer = metrics.timer("decoding")
+class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDecoder with Instrumented {
+  val decodeTimer = metrics.timer("decoding", peer.name)
   
   
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = obj match {

@@ -22,13 +22,18 @@ import org.jetlang.channels._
 import org.jetlang.core._
 import com.codahale.logula.Logging
 import java.util.concurrent.TimeUnit
+import com.yammer.metrics._
 
-abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging {
+abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging with Instrumented {
   val self = ctx.pid
   val fiber = ctx.fiber
   val referenceCounter = ctx.referenceCounter
   val replyRegistry = ctx.replyRegistry
   val node = ctx.node
+  val messageRate = metrics.meter("messages", "messages", instrumentedName)
+  val executionTimer = metrics.timer("execution", instrumentedName)
+  
+  def instrumentedName = self.toErlangString
   
   implicit def pid2sendable(pid : Pid) = new PidSend(pid,this)
   implicit def sym2sendable(to : Symbol) = new SymSend(to,this)
@@ -95,6 +100,7 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging {
   }
   
   override def handleMessage(msg : Any) {
+    messageRate.mark
     msgChannel.publish(msg)
   }
   
@@ -106,12 +112,14 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging {
   val msgChannel = new MemoryChannel[Any]
   msgChannel.subscribe(ctx.fiber, new Callback[Any] {
     def onMessage(msg : Any) {
-      try {
-        p.onMessage(msg)
-      } catch {
-        case e : Throwable =>
-          log.error(e, "An error occurred in actor %s", this)
-          exit(e.getMessage)
+      executionTimer.time {
+        try {
+          p.onMessage(msg)
+        } catch {
+          case e : Throwable =>
+            log.error(e, "An error occurred in actor %s", this)
+            exit(e.getMessage)
+        }
       }
     }
   })

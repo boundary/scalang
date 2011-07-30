@@ -41,7 +41,7 @@ class ErlangNodeServer(node : ErlangNode, typeFactory : TypeFactory) {
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
       pipeline.addLast("timeout", new ReadTimeoutHandler(node.timer, 60))
-      pipeline.addLast("erlangDecoder", new ScalaTermDecoder(typeFactory))
+      pipeline.addLast("erlangDecoder", new ScalaTermDecoder('server, typeFactory))
       pipeline.addLast("erlangEncoder", new ScalaTermEncoder)
       pipeline.addLast("erlangHandler", new ErlangHandler(node))
 

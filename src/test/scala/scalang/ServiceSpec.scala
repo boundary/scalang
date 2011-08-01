@@ -20,14 +20,14 @@ class ServiceSpec extends Specification {
     
     "deliver casts" in {
       node = Node(Symbol("test@localhost"), cookie)
-      val service = node.spawn[CastNoopService]
+      val service = node.spawnService[CastNoopService,NoArgs](NoArgs)
       node.send(service, (Symbol("$gen_cast"),'blah))
       node.isAlive(service) must ==(true)
     }
     
     "deliver calls" in {
       node = Node(Symbol("test@localhost"), cookie)
-      val service = node.spawn[CallEchoService]
+      val service = node.spawnService[CallEchoService,NoArgs](NoArgs)
       val mbox = node.spawnMbox
       val ref = node.makeRef
       node.send(service, (Symbol("$gen_call"), (mbox.self, ref), 'blah))
@@ -36,7 +36,7 @@ class ServiceSpec extends Specification {
     
     "respond to pings" in {
       node = Node(Symbol("test@localhost"), cookie)
-      val service = node.spawn[CastNoopService]
+      val service = node.spawnService[CastNoopService,NoArgs](NoArgs)
       val mbox = node.spawnMbox
       val ref = node.makeRef
       node.send(service, ('ping, mbox.self, ref))
@@ -45,7 +45,7 @@ class ServiceSpec extends Specification {
     
     "call and response" in {
       node = Node(Symbol("test@localhost"), cookie)
-      val service = node.spawn[CallAndReceiveService]
+      val service = node.spawnService[CallAndReceiveService,NoArgs](NoArgs)
       val mbox = node.spawnMbox
       node.send(service, mbox.self)
       val (Symbol("$gen_call"), (_, ref : Reference), req) = mbox.receive
@@ -56,7 +56,8 @@ class ServiceSpec extends Specification {
   }
 }
 
-class CallAndReceiveService(ctx : ProcessContext) extends Service(ctx) {
+class CallAndReceiveService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
+  
   override def handleCast(msg : Any) {
     throw new Exception
   }
@@ -72,7 +73,7 @@ class CallAndReceiveService(ctx : ProcessContext) extends Service(ctx) {
   }
 }
 
-class CastNoopService(ctx : ProcessContext) extends Service(ctx) {
+class CastNoopService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
   override def handleCast(msg : Any) {
     println("cast received " + msg)
   }
@@ -86,7 +87,8 @@ class CastNoopService(ctx : ProcessContext) extends Service(ctx) {
   }
 }
 
-class CallEchoService(ctx : ProcessContext) extends Service(ctx) {
+class CallEchoService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
+  
   override def handleCast(msg : Any) {
     throw new Exception
   }

@@ -11,7 +11,7 @@ import scalang.util._
 class ScalaTermDecoderSpec extends Specification {
   "ScalaTermDecoder" should {
     "decode regular terms" in {
-      val decoder = new ScalaTermDecoder(NoneTypeFactory)
+      val decoder = new ScalaTermDecoder('test, NoneTypeFactory)
       
       "read small integers" in {
         val thing = decoder.readTerm(copiedBuffer(ByteArray(97,2)))
@@ -94,7 +94,7 @@ class ScalaTermDecoderSpec extends Specification {
       }
       
       "read case objects" in {
-        val dec = new ScalaTermDecoder(new CaseClassFactory(Seq("scalang.node"), Map[String,Class[_]]()))
+        val dec = new ScalaTermDecoder('test, new CaseClassFactory(Seq("scalang.node"), Map[String,Class[_]]()))
         //{foo, "balls", 1245, 60.0}
         val foo = dec.readTerm(copiedBuffer(ByteArray(104,4,100,0,3,102,111,111,107,0,5,98,97,108,108,115,98,0,0,4,221,99,54,
                                                       46,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,101,43,48,49,
@@ -107,7 +107,7 @@ class ScalaTermDecoderSpec extends Specification {
       }
       
       "read typeMapped objects" in {
-        val dec = new ScalaTermDecoder(new CaseClassFactory(Nil, Map("herp" -> classOf[Derp])))
+        val dec = new ScalaTermDecoder('test, new CaseClassFactory(Nil, Map("herp" -> classOf[Derp])))
         //{herp, 6234234234234234234, 1260.0, "gack"}
         val derp = dec.readTerm(copiedBuffer(ByteArray(104,4,100,0,4,104,101,114,112,110,8,0,122,101,28,114,1,115,132,86,99,49,
                                                        46,50,54,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,101,43,48,51,
@@ -121,7 +121,7 @@ class ScalaTermDecoderSpec extends Specification {
     }
     
     "decode full distribution packets" in {
-      val embedder = new DecoderEmbedder[Any](new ScalaTermDecoder(new CaseClassFactory(Nil, Map[String,Class[_]]())))
+      val embedder = new DecoderEmbedder[Any](new ScalaTermDecoder('test, new CaseClassFactory(Nil, Map[String,Class[_]]())))
     }
     
     

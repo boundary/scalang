@@ -39,6 +39,7 @@ import com.codahale.logula.Logging
 import org.apache.log4j.Level
 import org.jboss.netty.logging._
 import netty.util.HashedWheelTimer
+import com.yammer.metrics._
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
@@ -134,9 +135,9 @@ trait Node extends ClusterListener with ClusterPublisher {
   def spawn[T <: Process](implicit mf : Manifest[T]) : Pid
   def spawn[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid
   def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid
-  def spawnService[T <: Service](args : Any)(implicit mf : Manifest[T]) : Pid
-  def spawnService[T <: Service](regName : String, args : Any)(implicit mf : Manifest[T]) : Pid
-  def spawnService[T <: Service](regName : Symbol, args : Any)(implicit mf : Manifest[T]) : Pid
+  def spawnService[T <: Service[A], A <: Product](args : A)(implicit mf : Manifest[T]) : Pid
+  def spawnService[T <: Service[A], A <: Product](regName : String, args : A)(implicit mf : Manifest[T]) : Pid
+  def spawnService[T <: Service[A], A <: Product](regName : Symbol, args : A)(implicit mf : Manifest[T]) : Pid
   def spawn(fun : Mailbox => Unit) : Pid
   def spawn(regName : String, fun : Mailbox => Unit) : Pid
   def spawn(regName : Symbol, fun : Mailbox => Unit) : Pid
@@ -326,33 +327,32 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     spawn[T](Symbol(regName),reentrant)(mf)
   }
   
-  def spawnService[T <: Service](args : Any)(implicit mf : Manifest[T]) : Pid = {
-    spawnService(args, false)(mf)
+  def spawnService[T <: Service[A], A <: Product](args : A)(implicit mf : Manifest[T]) : Pid = {
+    spawnService[T,A](args, false)(mf)
   }
   
-  def spawnService[T <: Service](args : Any, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+  def spawnService[T <: Service[A], A <: Product](args : A, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
-    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(reentrant))
-    process.init(args)
+    val process = createService(mf.erasure.asInstanceOf[Class[T]], pid, args, poolFactory.createBatchExecutor(reentrant))
+/*    process.init(args)*/
     pid
   }
   
-  def spawnService[T <: Service](regName : String, args : Any)(implicit mf : Manifest[T]) : Pid = {
-    spawnService(regName, args, false)(mf)
+  def spawnService[T <: Service[A], A <: Product](regName : String, args : A)(implicit mf : Manifest[T]) : Pid = {
+    spawnService[T,A](regName, args, false)(mf)
   }
   
-  def spawnService[T <: Service](regName : String, args : Any, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
-    spawnService(Symbol(regName), args, reentrant)(mf)
+  def spawnService[T <: Service[A], A <: Product](regName : String, args : A, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+    spawnService[T,A](Symbol(regName), args, reentrant)(mf)
   }
   
-  def spawnService[T <: Service](regName : Symbol, args : Any)(implicit mf : Manifest[T]) : Pid = {
-    spawnService(regName, args, false)(mf)
+  def spawnService[T <: Service[A], A <: Product](regName : Symbol, args : A)(implicit mf : Manifest[T]) : Pid = {
+    spawnService[T,A](regName, args, false)(mf)
   }
   
-  def spawnService[T <: Service](regName : Symbol, args : Any, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
+  def spawnService[T <: Service[A], A <: Product](regName : Symbol, args : A, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
-    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(regName.name, reentrant))
-    process.init(args)
+    val process = createService(mf.erasure.asInstanceOf[Class[T]], pid, args, poolFactory.createBatchExecutor(regName.name, reentrant))
     registeredNames.put(regName, pid)
     pid
   }
@@ -363,6 +363,26 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   
   override def nodeUp(node : Symbol) {
     send('cluster, ('nodeup, node))
+  }
+  
+  protected def createService[A <: Product, T <: Service[A]](clazz : Class[T], p : Pid, a : A, batch : BatchExecutor) : T = {
+    val constructor = clazz.getConstructor(classOf[ServiceContext[_]])
+    val n = this
+    val ctx = new ServiceContext[A] {
+      val pid = p
+      val referenceCounter = n.referenceCounter
+      val node = n
+      val fiber = factory.create(batch)
+      val replyRegistry = n
+      val args = a
+    }
+    val process = constructor.newInstance(ctx)
+    process.addExitListener(this)
+    process.addSendListener(this)
+    process.addLinkListener(this)
+    processes.put(p, process)
+    process.fiber.start
+    process
   }
   
   protected def createProcess[T <: Process](clazz : Class[T], p : Pid, batch : BatchExecutor) : T = {

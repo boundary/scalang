@@ -26,15 +26,14 @@ import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
  * Service is a class that provides a responder in the shape expected
  * by gen_lb.  A service may define handlers for either cast, call, or both.
  */
-abstract class Service(ctx : ProcessContext) extends Process(ctx) {
-  
+abstract class Service[A <: Product](ctx : ServiceContext[A]) extends Process(ctx) {
   /**
    * Init callback for any context that the service might need.
    */
-  def init(args : Any) {
+/*  def init(args : Any) {
     // noop
   }
-  
+*/  
   /**
    * Handle a call style of message which will expect a response.
    */

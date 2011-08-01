@@ -77,7 +77,7 @@ class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
     }
     
     def call : Any = {
-      if (lock.await(500, TimeUnit.MILLISECONDS)) {
+      if (lock.await(5000, TimeUnit.MILLISECONDS)) {
         if (error.get != null) {
           throw new Exception("EPMD Registration failed.", error.get)
         } else {

@@ -8,7 +8,7 @@ class ScalangProject(info : ProjectInfo) extends DefaultProject(info) {
   override def managedStyle = ManagedStyle.Maven
   val boundaryPublic = "Boundary Public Repo" at "http://maven.boundary.com/artifactory/repo"
   
-  val publishTo = "Boundary Public Repo (Publish)" at "http://maven.boundary.com/artifactory/external"
+  val publishTo = "Boundary Public Repo (Publish)" at "https://maven.boundary.com/artifactory/external"
   
   
   val logula = "com.codahale" %% "logula" % "2.1.2"

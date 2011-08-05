@@ -22,7 +22,7 @@ trait TypeFactory {
   def createType(name : Symbol, arity : Int, reader : TermReader) : Option[Any]
 }
 
-class TermReader(buffer : ChannelBuffer, decoder : ScalaTermDecoder) {
+class TermReader(val buffer : ChannelBuffer, decoder : ScalaTermDecoder) {
   var m : Int = 0
   
   def mark : TermReader = {

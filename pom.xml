@@ -1,0 +1,113 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.boundary</groupId>
+    <artifactId>scalang_2.8.1</artifactId>
+    <packaging>jar</packaging>
+    <version>0.8.1</version>
+    <dependencies>
+        <dependency>
+            <groupId>com.codahale</groupId>
+            <artifactId>logula_2.8.1</artifactId>
+            <version>2.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.boundary</groupId>
+            <artifactId>overlock_2.8.1</artifactId>
+            <version>0.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetlang</groupId>
+            <artifactId>jetlang</artifactId>
+            <version>0.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.netty</groupId>
+            <artifactId>netty</artifactId>
+            <version>3.2.4.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-tools.testing</groupId>
+            <artifactId>specs_2.8.1</artifactId>
+            <version>1.6.7</version>
+			<scope>test</scope>
+        </dependency>
+    </dependencies>
+    <repositories>
+        <repository>
+            <id>CodasRepo</id>
+            <name>Coda's Repo</name>
+            <url>http://repo.codahale.com/</url>
+        </repository>
+        <repository>
+            <id>JetLangRepository</id>
+            <name>Jet Lang Repository</name>
+            <url>http://jetlang.googlecode.com/svn/repo/</url>
+        </repository>
+        <repository>
+            <id>BoundaryPublicRepo</id>
+            <name>Boundary Public Repo</name>
+            <url>http://maven.boundary.com/artifactory/repo/</url>
+        </repository>
+        <repository>
+            <id>ScalaToolsMaven2Repository</id>
+            <name>Scala-Tools Maven2 Repository</name>
+            <url>http://scala-tools.org/repo-releases/</url>
+        </repository>
+	 <repository>
+	   <id>scala-tools.org</id> 
+	   <name>snapshots</name> 
+	   <url>http://scala-tools.org/repo-snapshots</url> 
+	 </repository>
+
+	 <repository>
+	   <id>central</id> 
+	   <name>Maven repository</name> 
+	   <url>http://repo1.maven.org/maven2</url> 
+	 </repository>
+
+	  <repository>
+	   <id>ObjectWeb</id> 
+	   <name>ObjectWeb repository</name> 
+	   <url>http://maven.ow2.org/maven2</url> 
+	 </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>scala-tools-releases</id>
+            <url>http://scala-tools.org/repo-releases/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.scala-tools</groupId>
+                <artifactId>maven-scala-plugin</artifactId>
+                <version>2.15.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <args>
+                        <arg>-optimise</arg>
+                        <arg>-unchecked</arg>
+                        <arg>-deprecation</arg>
+                    </args>
+                    <charset>UTF-8</charset>
+                </configuration>
+            </plugin>
+		</plugins>
+	</build>
+</project>

@@ -51,7 +51,7 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
       super.messageReceived(ctx, e)
       return
     }
-    
+    log.info("handshake event " + this + " - " + msg)
     event(msg)
   }
   

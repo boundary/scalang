@@ -25,6 +25,34 @@ import scalang._
 import com.yammer.metrics._
 import scala.collection.mutable.ArrayBuffer
 import overlock.cache.CachedSymbol
+import sun.misc.Unsafe
+
+object ScalaTermDecoder {
+  private val field = classOf[Unsafe].getDeclaredField("theUnsafe")
+  field.setAccessible(true)
+  val unsafe = field.get(classOf[ScalaTermDecoder]).asInstanceOf[Unsafe]
+
+  val stringValueOffset = unsafe.objectFieldOffset(classOf[String].getDeclaredField("value"))
+  val stringOffsetOffset = unsafe.objectFieldOffset(classOf[String].getDeclaredField("offset"))
+  val stringCountOffset = unsafe.objectFieldOffset(classOf[String].getDeclaredField("count"))
+
+  // Initializes a string by creating an empty String object, then populating it with our own
+  // backing char[] to prevent allocating / copying between byte[] or char[] twice.
+  def fastString(buffer: ChannelBuffer, length: Int) : String = {
+    val destArray = new Array[Char](length)
+
+    var i = 0
+    while (i < length) {
+      destArray(i) = buffer.readByte().asInstanceOf[Char]
+      i+=1
+    }
+
+    val result = unsafe.allocateInstance(classOf[String]).asInstanceOf[String]
+    unsafe.putObject(result, stringValueOffset, destArray)
+    unsafe.putInt(result, stringCountOffset, length)
+    result
+  }
+}
 
 class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDecoder with Instrumented {
   val decodeTimer = metrics.timer("decoding", peer.name)
@@ -75,16 +103,12 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
       case 98 => //integer
         buffer.readInt
       case 99 => //float string
-        val bytes = new Array[Byte](31)
-        buffer.readBytes(bytes)
-        val floatString = new String(bytes)
+        val floatString = ScalaTermDecoder.fastString(buffer, 31)
         floatString.toDouble
       case 100 => //atom OR boolean
         val len = buffer.readShort
-        val bytes = new Array[Byte](len)
-        buffer.readBytes(bytes)
-
-        CachedSymbol(new String(bytes)) match {
+        val str = ScalaTermDecoder.fastString(buffer, len)
+        CachedSymbol(str) match {
           case 'true => true
           case 'false => false
           case atom => atom
@@ -115,9 +139,7 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         Nil
       case 107 => //string
         val length = buffer.readShort
-        val bytes = new Array[Byte](length)
-        buffer.readBytes(bytes)
-        new String(bytes)
+        ScalaTermDecoder.fastString(buffer, length)
       case 108 => //list
         val length = buffer.readInt
         val (list, improper) = readList(length, buffer)
@@ -165,9 +187,8 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         Reference(node, id, creation)
       case 115 => //small atom
         val length = buffer.readUnsignedByte
-        val bytes = new Array[Byte](length)
-        buffer.readBytes(bytes)
-        CachedSymbol(new String(bytes))
+        val str = ScalaTermDecoder.fastString(buffer, length)
+        CachedSymbol(str)
       case 117 => //fun
         val numFree = buffer.readInt
         val pid = readTerm(buffer).asInstanceOf[Pid]

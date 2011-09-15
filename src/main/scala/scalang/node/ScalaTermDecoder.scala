@@ -24,11 +24,11 @@ import scala.annotation.tailrec
 import scalang._
 import com.yammer.metrics._
 import scala.collection.mutable.ArrayBuffer
+import overlock.cache.CachedSymbol
 
 class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDecoder with Instrumented {
   val decodeTimer = metrics.timer("decoding", peer.name)
-  
-  
+
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = obj match {
     case buffer : ChannelBuffer =>
       if (buffer.readableBytes > 0) {
@@ -83,7 +83,8 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         val len = buffer.readShort
         val bytes = new Array[Byte](len)
         buffer.readBytes(bytes)
-        Symbol(new String(bytes)) match {
+
+        CachedSymbol(new String(bytes)) match {
           case 'true => true
           case 'false => false
           case atom => atom
@@ -166,7 +167,7 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         val length = buffer.readUnsignedByte
         val bytes = new Array[Byte](length)
         buffer.readBytes(bytes)
-        Symbol(new String(bytes))
+        CachedSymbol(new String(bytes))
       case 117 => //fun
         val numFree = buffer.readInt
         val pid = readTerm(buffer).asInstanceOf[Pid]

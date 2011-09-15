@@ -33,6 +33,11 @@ class ScalaTermDecoderSpec extends Specification {
         thing must ==('blah)
       }
 
+      "read strings" in {
+        val thing = decoder.readTerm(copiedBuffer(ByteArray(107,0,4,98,108,97,104)))
+        thing must ==("blah")
+      }
+
       "read pids" in {
         val thing = decoder.readTerm(copiedBuffer(ByteArray(103,100,0,13,110,111,110,111,100,101,64,110,111,104,
           111,115,116,0,0,0,31,0,0,0,0,0)))

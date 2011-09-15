@@ -42,10 +42,11 @@ trait ThreadPoolFactory {
 
 class DefaultThreadPoolFactory extends ThreadPoolFactory {
   val cpus = Runtime.getRuntime.availableProcessors
+  val max_threads = if ((2 * cpus) < 8) 8 else 2*cpus
   
-  lazy val bossPool = ThreadPool.instrumentedElastic("scalang", "boss", 1, cpus)
-  lazy val workerPool = ThreadPool.instrumentedElastic("scalang", "worker", 1, cpus)
-  lazy val actorPool = ThreadPool.instrumentedElastic("scalang", "actor", 1, cpus)
+  lazy val bossPool = ThreadPool.instrumentedElastic("scalang", "boss", 2, max_threads)
+  lazy val workerPool = ThreadPool.instrumentedElastic("scalang", "worker", 2, max_threads)
+  lazy val actorPool = ThreadPool.instrumentedElastic("scalang", "actor", 2, max_threads)
   
   val poolNameCounter = new AtomicInteger(0)
   

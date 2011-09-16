@@ -214,13 +214,9 @@ Most modern Erlang applications are built using the OTP framework, and in partic
 
 <pre>
 <code>
-  class EchoService(ctx : ProcessContext) extends Service(ctx) {
-    
-    var name : String = null
-    
-    override def init(args : Any) = args match {
-      case n : String => name = n
-    }
+  case class EchoServiceArgs(name : String)
+  class EchoService(ctx : ServiceContext[EchoServiceArgs]) extends Service(ctx) {
+    val EchoServiceArgs(name) = ctx.args
     
     override def handleCall(from : Pid, request : Any) : Any = {
       name + " " + request
@@ -236,7 +232,7 @@ Most modern Erlang applications are built using the OTP framework, and in partic
   }
   
   val node = Node("test", cookie)
-  val pid = node.spawnService[EchoService]("echo", "test_echo")
+  val pid = node.spawnService[EchoService]("echo", EchoServiceArgs("test_echo"))
 </code>
 </pre>
 

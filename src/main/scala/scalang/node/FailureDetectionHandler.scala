@@ -35,7 +35,6 @@ class FailureDetectionHandler(node : Symbol, clock : Clock, tickTime : Int, time
       case _ =>
         ctx.sendUpstream(e);
     }
-    super.messageReceived(ctx, e)
   }
   
   object TickTask extends TimerTask {

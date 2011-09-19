@@ -30,7 +30,7 @@ import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 
-class ServerHandshakeHandler(node : Symbol, cookie : String) extends HandshakeHandler {
+class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Symbol,ChannelPipeline) => Unit) extends HandshakeHandler(posthandshake) {
   states(
     state('disconnected, { 
       case ConnectedMessage => 'connected
@@ -70,7 +70,7 @@ class ServerHandshakeHandler(node : Symbol, cookie : String) extends HandshakeHa
     val channel = ctx.getChannel
     val future = Channels.future(channel)
     challenge = random.nextInt
-    val msg = ChallengeMessage(5, DistributionFlags.default, challenge, node.name)
+    val msg = ChallengeMessage(5, DistributionFlags.default, challenge, name.name)
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
   

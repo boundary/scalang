@@ -5,6 +5,7 @@ import scalang.util._
 import org.jboss.{netty => netty}
 import netty.handler.codec.embedder._
 import netty.buffer._
+import netty.channel._
 import ChannelBuffers._
 import java.security.MessageDigest
 
@@ -14,7 +15,9 @@ class ClientHandshakeHandlerSpec extends Specification {
   
   "ClientHandshakeHandler" should {
     "complete a standard handshake" in {
-      val handshake = new ClientHandshakeHandler(node, cookie)
+      val handshake = new ClientHandshakeHandler(node, cookie, { (peer : Symbol, p : ChannelPipeline) =>
+        
+      })
       val embedder = new TwoWayCodecEmbedder[Any](handshake)
       val nameMsg = embedder.poll
       nameMsg must beLike { case NameMessage(5, _, node) => true }

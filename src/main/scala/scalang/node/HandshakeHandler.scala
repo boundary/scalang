@@ -31,7 +31,7 @@ import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 import com.codahale.logula.Logging
 
-abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine with Logging {
+abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit) extends SimpleChannelHandler with StateMachine with Logging {
   override val start = 'disconnected
   @volatile var ctx : ChannelHandlerContext = null
   @volatile var peer : Symbol = null
@@ -118,11 +118,7 @@ abstract class HandshakeHandler extends SimpleChannelHandler with StateMachine w
     for (name <- List("handshakeFramer", "handshakeDecoder", "handshakeEncoder", "handshakeHandler"); if keys.contains(name)) {
       p.remove(name)
     }
-    p.addFirst("packetCounter", new PacketCounter("stream-" + peer.name))
-    if (p.get("encoderFramer") != null)
-      p.addAfter("encoderFramer", "framedCounter", new PacketCounter("framed-" + peer.name))
-    if (p.get("erlangEncoder") != null)
-      p.addAfter("erlangEncoder", "erlangCounter", new PacketCounter("erlang-" + peer.name))
+    posthandshake(peer,p)
     
     for (msg <- messages) {
       ctx.sendDownstream(msg)

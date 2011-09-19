@@ -5,6 +5,7 @@ import scalang.util._
 import org.jboss.{netty => netty}
 import netty.handler.codec.embedder._
 import netty.buffer._
+import netty.channel._
 import ChannelBuffers._
 import java.security.MessageDigest
 
@@ -13,7 +14,9 @@ class ServerHandshakeHandlerSpec extends Specification {
   
   "ServerHandshakeHandler" should {
     "complete a standard handshake" in {
-      val handshake = new ServerHandshakeHandler(Symbol("tmp@blah"), cookie)
+      val handshake = new ServerHandshakeHandler(Symbol("tmp@blah"), cookie, { (peer : Symbol, p : ChannelPipeline) =>
+        
+      })
       val embedder = new TwoWayCodecEmbedder[Any](handshake)
       embedder.upstreamMessage(NameMessage(5, 32765, "tmp@moonpolysoft.local"))
       val status = embedder.poll

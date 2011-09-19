@@ -47,6 +47,7 @@ class DefaultThreadPoolFactory extends ThreadPoolFactory {
   lazy val bossPool = ThreadPool.instrumentedElastic("scalang", "boss", 2, max_threads)
   lazy val workerPool = ThreadPool.instrumentedElastic("scalang", "worker", 2, max_threads)
   lazy val actorPool = ThreadPool.instrumentedElastic("scalang", "actor", 2, max_threads)
+  lazy val batchExecutor = new BatchExecutorImpl
   
   val poolNameCounter = new AtomicInteger(0)
   
@@ -65,11 +66,11 @@ class DefaultThreadPoolFactory extends ThreadPoolFactory {
   def createBatchExecutor(name : String, reentrant : Boolean) : BatchExecutor = {
     if (reentrant) {
       val queue = new ElasticBlockingQueue[Runnable]
-      val pool = new BatchPoolExecutor("scalang", name, 1, cpus, 60l, TimeUnit.SECONDS, queue, new NamedThreadFactory(name))
+      val pool = new BatchPoolExecutor("scalang", name, 1, max_threads, 60l, TimeUnit.SECONDS, queue, new NamedThreadFactory(name))
       queue.executor = pool
       pool
     } else {
-      return new BatchExecutorImpl
+      return batchExecutor
     }
   }
   

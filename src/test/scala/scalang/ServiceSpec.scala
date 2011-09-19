@@ -62,7 +62,7 @@ class CallAndReceiveService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
     throw new Exception
   }
   
-  override def handleCall(from : Pid, msg : Any) : Any = {
+  override def handleCall(tag : (Pid, Reference), msg : Any) : Any = {
     throw new Exception
   }
   
@@ -78,7 +78,7 @@ class CastNoopService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
     println("cast received " + msg)
   }
   
-  override def handleCall(from : Pid, msg : Any) : Any = {
+  override def handleCall(tag : (Pid, Reference), msg : Any) : Any = {
     throw new Exception
   }
   
@@ -93,7 +93,7 @@ class CallEchoService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
     throw new Exception
   }
   
-  override def handleCall(from : Pid, msg : Any) : Any = {
+  override def handleCall(tag : (Pid, Reference), msg : Any) : Any = {
     msg
   }
   

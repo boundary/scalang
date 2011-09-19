@@ -184,6 +184,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   InternalLoggerFactory.setDefaultFactory(new Log4JLoggerFactory)
   
   val timer = new HashedWheelTimer
+  val tickTime = config.tickTime
   val poolFactory = config.poolFactory
   var creation : Int = 0
   val processes = new NonBlockingHashMap[Pid,ProcessLike]
@@ -662,6 +663,17 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     } catch {
       case e : Exception =>
         log.debug(e, "Exception in connect and send.")
+    }
+  }
+  
+  def posthandshake : (Symbol,ChannelPipeline) => Unit = {
+    { (peer : Symbol, p : ChannelPipeline) =>
+      p.addFirst("packetCounter", new PacketCounter("stream-" + peer.name))
+      if (p.get("encoderFramer") != null)
+        p.addAfter("encoderFramer", "framedCounter", new PacketCounter("framed-" + peer.name))
+      if (p.get("erlangEncoder") != null)
+        p.addAfter("erlangEncoder", "erlangCounter", new PacketCounter("erlang-" + peer.name))
+      p.addAfter("erlangCounter", "failureDetector", new FailureDetectionHandler(name, new SystemClock, tickTime, timer))
     }
   }
   

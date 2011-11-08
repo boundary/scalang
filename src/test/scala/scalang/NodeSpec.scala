@@ -1,12 +1,15 @@
 package scalang
 
 import org.specs._
+import org.specs.runner._
 import scalang.node._
 import java.lang.{Process => JProc}
 import java.io._
 import scala.collection.JavaConversions._
 
-class NodeSpec extends Specification {
+class nodeTest extends JUnit4(NodeSpec)
+
+object NodeSpec extends Specification {
   "Node" should {
     var epmd : JProc = null
     var erl : JProc = null

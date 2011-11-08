@@ -1,6 +1,7 @@
 package scalang.node
 
 import org.specs._
+import org.specs.runner._
 import scalang.util._
 import org.jboss.{netty => netty}
 import netty.handler.codec.embedder._
@@ -9,7 +10,9 @@ import netty.channel._
 import ChannelBuffers._
 import java.security.MessageDigest
 
-class ServerHandshakeHandlerSpec extends Specification {
+class serverHandshakeHandlerTest extends JUnit4(ServerHandshakeHandlerSpec)
+
+object ServerHandshakeHandlerSpec extends Specification {
   val cookie = "DRSJLFJLGIYPEAVFYFCY"
   
   "ServerHandshakeHandler" should {

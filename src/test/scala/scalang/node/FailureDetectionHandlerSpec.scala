@@ -1,6 +1,7 @@
 package scalang.node
 
 import org.specs._
+import org.specs.runner._
 import scalang.util._
 import org.jboss.{netty => netty}
 import netty.handler.codec.embedder._
@@ -10,7 +11,9 @@ import netty.handler.timeout._
 import java.util.{Set => JSet}
 import java.util.concurrent._
 
-class FailureDetectionHandlerSpec extends Specification {
+class failureDetectionHandlerTest extends JUnit4(FailureDetectionHandlerSpec)
+
+object FailureDetectionHandlerSpec extends Specification {
   class SeqClock(seq : Long*) extends Clock {
     val iterator = seq.iterator
     

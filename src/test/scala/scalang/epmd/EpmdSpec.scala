@@ -1,10 +1,13 @@
 package scalang.epmd
 
 import org.specs._
+import org.specs.runner._
 import java.lang.{Process => SysProcess}
 import scalang._
 
-class EpmdSpec extends Specification {
+class epmdTest extends JUnit4(EpmdSpec)
+
+object EpmdSpec extends Specification {
   "Epmd" should {
     var proc : SysProcess = null
     doBefore {

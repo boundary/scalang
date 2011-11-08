@@ -4,7 +4,7 @@
     <groupId>com.boundary</groupId>
     <artifactId>scalang_2.8.1</artifactId>
     <packaging>jar</packaging>
-    <version>0.8.2</version>
+    <version>0.8.3-PRE</version>
     <dependencies>
         <dependency>
             <groupId>com.codahale</groupId>
@@ -26,6 +26,12 @@
             <artifactId>netty</artifactId>
             <version>3.2.4.Final</version>
         </dependency>
+        <dependency>
+             <groupId>junit</groupId>
+             <artifactId>junit</artifactId>
+             <version>4.4</version>
+             <scope>test</scope>
+         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
@@ -86,6 +92,8 @@
 
 
     <build>
+      <sourceDirectory>src/main/scala</sourceDirectory>
+      <testSourceDirectory>src/test/scala</testSourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.scala-tools</groupId>
@@ -108,6 +116,83 @@
                     <charset>UTF-8</charset>
                 </configuration>
             </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.8.1</version>
+                <configuration>
+                    <useFile>false</useFile>
+                    <useSystemClassLoader>false</useSystemClassLoader>
+                    <argLine>-Xmx1024m</argLine>
+                </configuration>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                  <execution>
+                    <phase>package</phase>
+                    <goals>
+                      <goal>shade</goal>
+                    </goals>
+                    <configuration>
+                      <artifactSet>
+                        <excludes>
+                          <exclude>org.scala-tools.testing:specs_2.8.0</exclude>
+                          <exclude>com.twitter:json_2.8.0</exclude>
+                          <exclude>junit:junit</exclude>
+                        </excludes>
+                      </artifactSet>
+                    </configuration>
+                  </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.1.2</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>cobertura-maven-plugin</artifactId>
+              <version>2.5.1</version>
+              <configuration>
+ 	              <formats>
+ 	                <format>xml</format>
+ 	                <format>html</format>
+ 	              </formats>
+              </configuration>
+              <executions>
+                <execution>
+                  <phase>clean</phase>
+                </execution>
+              </executions>
+            </plugin>
 		</plugins>
 	</build>
+	
+	<reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>cobertura-maven-plugin</artifactId>
+        <version>2.5.1</version>
+      </plugin>
+    </plugins>
+  </reporting>
+	
 </project>

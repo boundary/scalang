@@ -1,6 +1,7 @@
 package scalang.node
 
 import org.specs._
+import org.specs.runner._
 import scalang._
 import org.jboss.netty._
 import handler.codec.embedder._
@@ -8,7 +9,9 @@ import java.nio._
 import buffer.ChannelBuffers._
 import scalang.util._
 
-class ScalaTermDecoderSpec extends Specification {
+class scalaTermDecoderTest extends JUnit4(ScalaTermDecoderSpec)
+
+object ScalaTermDecoderSpec extends Specification {
   "ScalaTermDecoder" should {
     "decode regular terms" in {
       val decoder = new ScalaTermDecoder('test, NoneTypeFactory)

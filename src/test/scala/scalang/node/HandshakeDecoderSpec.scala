@@ -1,12 +1,15 @@
 package scalang.node
 
 import org.specs._
+import org.specs.runner._
 import scalang.util._
 import org.jboss.{netty => netty}
 import netty.handler.codec.embedder._
 import netty.buffer.ChannelBuffers._
 
-class HandshakeDecoderSpec extends Specification {
+class handshakeDecoderTest extends JUnit4(HandshakeDecoderSpec)
+
+object HandshakeDecoderSpec extends Specification {
   "HandshakeDecoder" should {
     "decode name messages" in {
       val decoder = new HandshakeDecoder

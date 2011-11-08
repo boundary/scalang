@@ -10,7 +10,8 @@ class ScalangProject(info : ProjectInfo) extends DefaultProject(info) {
   
   val publishTo = "Boundary Public Repo (Publish)" at "https://maven.boundary.com/artifactory/external"
   
-  
+  val junitInterface = "com.novocode" % "junit-interface" % "0.6" % "test->default"
+
   val logula = "com.codahale" %% "logula" % "2.1.2"
   val netty = "org.jboss.netty" % "netty" % "3.2.4.Final"
   val jetlang = "org.jetlang" % "jetlang" % "0.2.5"

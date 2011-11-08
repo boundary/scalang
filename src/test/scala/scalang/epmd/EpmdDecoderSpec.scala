@@ -1,13 +1,16 @@
 package scalang.epmd
 
 import org.specs._
+import org.specs.runner._
 import scalang.util._
 import org.jboss.{netty => netty}
 import netty.handler.codec.embedder._
 import netty.buffer.ChannelBuffers._
 import EpmdConst._
 
-class EpmdDecoderSpec extends Specification {
+class epmdDecoderTest extends JUnit4(EpmdDecoderSpec)
+
+object EpmdDecoderSpec extends Specification {
   "EpmdDecoder" should {
     "decode alive responses" in {
       val embedder = new DecoderEmbedder[AliveResp](new EpmdDecoder)

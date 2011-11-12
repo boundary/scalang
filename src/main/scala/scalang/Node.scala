@@ -487,7 +487,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
   // Link two pids without triggering a send of a Link message to the remote.
   def linkWithoutNotify(from : Pid, to : Pid, channel: Channel) {
-    log.info("link w/o notify %s -> %s", from, to)
+    log.debug("link w/o notify %s -> %s", from, to)
     if (from == to) {
       log.warn("Trying to link a pid to itself: %s", from)
       return

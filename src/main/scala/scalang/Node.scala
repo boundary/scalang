@@ -428,7 +428,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   def ping(node : Symbol, timeout : Long) : Boolean = {
     val mbox = spawnMbox
     val ref = makeRef
-    mbox.send('net_kernel, (Symbol("$gen_call"), (mbox.self, ref), ('is_auth, name)))
+    mbox.send(('net_kernel, Symbol(node.name)), mbox.self, ((Symbol("$gen_call"), (mbox.self, ref), ('is_auth, node))))
     val result = mbox.receive(timeout) match {
       case Some((ref, 'yes)) => true
       case m => 

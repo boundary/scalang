@@ -63,7 +63,12 @@ object NodeSpec extends Specification {
       ReadLine(erl)
       node.ping(Symbol("test@localhost"), 1000) must ==(true)
     }
-    
+
+    "invalid pings should fail" in {
+      node = Node(Symbol("scala@localhost"), cookie)
+      node.ping(Symbol("taco_truck@localhost"), 1000) must ==(false)
+    }
+
     "send local regname" in {
       node = Node(Symbol("scala@localhost"), cookie)
       val echoPid = node.spawn[EchoProcess]('echo)

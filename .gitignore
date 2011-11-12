@@ -2,3 +2,7 @@ project/boot/*
 project/build/target/*
 target/*
 lib_managed/*
+.DS_Store
+*.iml
+*.iws
+*.ipr

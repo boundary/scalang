@@ -503,13 +503,9 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         val link = p.get.linkWithoutNotify(to)
         if (!isLocal(from))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
-        else
-          println("from process was some, link request was local!")
       case None =>
         if (!isLocal(from))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
-        else
-          println("from process was none, link request was local!")
     }
 
     process(to) match {
@@ -517,14 +513,10 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         val link = p.get.linkWithoutNotify(from)
         if (!isLocal(to))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
-        else
-          println("to process was some, link request was local!")
         
       case None =>
         if (!isLocal(to))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
-        else
-          println("to process was none, link request was local!")
     }
   }
   

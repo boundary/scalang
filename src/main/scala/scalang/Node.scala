@@ -484,6 +484,49 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       p.link(from)
     }
   }
+
+  // Link two pids without triggering a send of a Link message to the remote.
+  def linkWithoutNotify(from : Pid, to : Pid, channel: Channel) {
+    log.info("link w/o notify %s -> %s", from, to)
+    if (from == to) {
+      log.warn("Trying to link a pid to itself: %s", from)
+      return
+    }
+
+    if (!isLocal(from) && !isLocal(to)) {
+      log.warn("Trying to link non-local pids: %s -> %s", from, to)
+      return
+    }
+
+    process(from) match {
+      case p: Some[Process] =>
+        val link = p.get.linkWithoutNotify(to)
+        if (!isLocal(from))
+          links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
+        else
+          println("from process was some, link request was local!")
+      case None =>
+        if (!isLocal(from))
+          links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
+        else
+          println("from process was none, link request was local!")
+    }
+
+    process(to) match {
+      case p: Some[Process] =>
+        val link = p.get.linkWithoutNotify(from)
+        if (!isLocal(to))
+          links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
+        else
+          println("to process was some, link request was local!")
+        
+      case None =>
+        if (!isLocal(to))
+          links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
+        else
+          println("to process was none, link request was local!")
+    }
+  }
   
   def send(to : Pid, msg : Any) = handleSend(to, msg)
   def send(to : Symbol, msg : Any) = handleSend(to, msg)
@@ -628,10 +671,9 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     pid.node == name //&& pid.creation == creation
   }
   
-  def disconnected(peer : Symbol) {
-    log.debug("lost connection to %s", peer)
+  def disconnected(peer : Symbol, channel: Channel) {
     if (channels.containsKey(peer)) {
-      val channel = channels.remove(peer)
+      channels.remove(peer)
       //must break all links here
       if (links.contains(channel)) {
         val setOption = links.remove(channel)

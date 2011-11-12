@@ -68,7 +68,7 @@ class ErlangNodeClient(
           channel.write(c)
         }
       } else {
-        node.disconnected(peer)
+        node.disconnected(peer, channel)
       }
     }
   })

@@ -81,12 +81,13 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
     }
   }
   
-  def linkWithoutNotify(to : Pid) {
+  def linkWithoutNotify(to : Pid) : Link = {
     val l = Link(self, to)
     for (listener <- linkListeners) {
       l.addLinkListener(listener)
     }
     links.add(l)
+    l
   }
   
   def unlink(to : Pid) {

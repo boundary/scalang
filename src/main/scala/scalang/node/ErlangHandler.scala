@@ -49,7 +49,8 @@ class ErlangHandler(
         node.registerConnection(name, channel)
         afterHandshake(channel)
       case LinkMessage(from, to) =>
-        node.link(from, to)
+        log.debug("received link request from %s.", from)
+        node.linkWithoutNotify(from, to, e.getChannel)
       case SendMessage(to, msg) =>
         node.handleSend(to, msg)
       case ExitMessage(from, to, reason) =>
@@ -64,8 +65,9 @@ class ErlangHandler(
   }
   
   override def channelDisconnected(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
+    log.debug("channel disconnected %s %s. peer: %s", ctx, e, peer)
     if (peer != null) {
-      node.disconnected(peer)
+      node.disconnected(peer, e.getChannel)
     }
   }
   

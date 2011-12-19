@@ -10,7 +10,7 @@ From SBT:
 <code>
   val boundaryPublic = "Boundary Public Repo" at "http://maven.boundary.com/artifactory/repo"
   
-  val scalang = "com.boundary" %% "scalang" % "0.6"
+  val scalang = "com.boundary" %% "scalang" % "0.9"
 </code>
 </pre>
 
@@ -28,14 +28,14 @@ From Maven:
   <dependencies>
     <dependency>
       <groupId>com.boundary</groupId>
-      <artifactId>scalang_2.8.1</artifactId>
-      <version>0.6</version>
+      <artifactId>scalang-scala_2.9.1</artifactId>
+      <version>0.9</version>
     </dependency>
   </dependencies>
 </code>
 </pre>
 
-Scalang currently supports Scala 2.8.1.  Scalang also requires "epmd":http://www.erlang.org/doc/man/epmd.html in order to run.
+Scalang currently supports Scala 2.9.1.  Scalang also requires "epmd":http://www.erlang.org/doc/man/epmd.html in order to run.
 
 h1. Usage
 

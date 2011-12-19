@@ -4,16 +4,6 @@ Scalang is a message passing and actor library that allows Scala and Erlang appl
 
 h1. Installation
 
-From SBT:
-
-<pre>
-<code>
-  val boundaryPublic = "Boundary Public Repo" at "http://maven.boundary.com/artifactory/repo"
-  
-  val scalang = "com.boundary" %% "scalang" % "0.9"
-</code>
-</pre>
-
 From Maven:
 
 <pre>
@@ -32,6 +22,16 @@ From Maven:
       <version>0.9</version>
     </dependency>
   </dependencies>
+</code>
+</pre>
+
+From SBT:
+
+<pre>
+<code>
+  val boundaryPublic = "Boundary Public Repo" at "http://maven.boundary.com/artifactory/repo"
+  
+  val scalang = "com.boundary" %% "scalang" % "0.9"
 </code>
 </pre>
 

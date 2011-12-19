@@ -1,14 +1,11 @@
 package scalang.node
 
 import org.jboss.{netty => netty}
-import netty.bootstrap._
 import netty.channel._
 import netty.util._
-import netty.handler.codec.frame._
 import netty.handler.timeout._
 import com.codahale.logula.Logging
 import java.util.concurrent._
-import atomic._
 
 class FailureDetectionHandler(node : Symbol, clock : Clock, tickTime : Int, timer : Timer) extends SimpleChannelHandler with Logging {
   @volatile var nextTick : Timeout = null

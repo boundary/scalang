@@ -1,17 +1,15 @@
-package scalang.node
+package scalang.terms
 
 import org.specs._
-import org.specs.runner._
-import scalang._
+import scalang.node.{Foo, Derp, CaseClassFactory, ScalaTermDecoder}
 import org.jboss.netty._
 import handler.codec.embedder._
 import java.nio._
 import buffer.ChannelBuffers._
 import scalang.util._
+import scalang._
 
-class scalaTermDecoderTest extends JUnit4(ScalaTermDecoderSpec)
-
-object ScalaTermDecoderSpec extends Specification {
+class ScalaTermDecoderSpec extends SpecificationWithJUnit {
   "ScalaTermDecoder" should {
     "decode regular terms" in {
       val decoder = new ScalaTermDecoder('test, NoneTypeFactory)
@@ -129,13 +127,7 @@ object ScalaTermDecoderSpec extends Specification {
     }
     
     "decode full distribution packets" in {
-      val embedder = new DecoderEmbedder[Any](new ScalaTermDecoder('test, new CaseClassFactory(Nil, Map[String,Class[_]]())))
+      new DecoderEmbedder[Any](new ScalaTermDecoder('test, new CaseClassFactory(Nil, Map[String,Class[_]]())))
     }
-    
-    
   }
 }
-
-case class Derp(long : Long, double : Double, gack : String)
-
-case class Foo(balls : String, integer : Int, float : Double)

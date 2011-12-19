@@ -1,12 +1,9 @@
 package scalang
 
 import org.specs._
-import org.specs.runner._
 import java.lang.{Process => JProc}
 
-class serviceTest extends JUnit4(ServiceSpec)
-
-object ServiceSpec extends Specification {
+class ServiceSpec extends SpecificationWithJUnit {
   "Service" should {
     val cookie = "test"
     var epmd : JProc = null

@@ -11,9 +11,7 @@ import netty.handler.timeout._
 import java.util.{Set => JSet}
 import java.util.concurrent._
 
-class failureDetectionHandlerTest extends JUnit4(FailureDetectionHandlerSpec)
-
-object FailureDetectionHandlerSpec extends Specification {
+class FailureDetectionHandlerSpec extends SpecificationWithJUnit {
   class SeqClock(seq : Long*) extends Clock {
     val iterator = seq.iterator
     

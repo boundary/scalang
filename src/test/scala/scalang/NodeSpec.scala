@@ -7,9 +7,7 @@ import java.lang.{Process => JProc}
 import java.io._
 import scala.collection.JavaConversions._
 
-class nodeTest extends JUnit4(NodeSpec)
-
-object NodeSpec extends Specification {
+class NodeSpec extends SpecificationWithJUnit {
   "Node" should {
     var epmd : JProc = null
     var erl : JProc = null

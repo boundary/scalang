@@ -4,15 +4,13 @@ import org.specs._
 import org.specs.runner._
 import scalang.util._
 import org.jboss.{netty => netty}
-import netty.handler.codec.embedder._
 import netty.buffer._
 import netty.channel._
 import ChannelBuffers._
 import java.security.MessageDigest
+import netty.handler.codec.embedder.TwoWayCodecEmbedder
 
-class serverHandshakeHandlerTest extends JUnit4(ServerHandshakeHandlerSpec)
-
-object ServerHandshakeHandlerSpec extends Specification {
+class ServerHandshakeHandlerSpec extends SpecificationWithJUnit {
   val cookie = "DRSJLFJLGIYPEAVFYFCY"
   
   "ServerHandshakeHandler" should {

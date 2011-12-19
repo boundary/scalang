@@ -83,7 +83,7 @@ object Node {
   protected def randomCookie : String = {
     val ary = new Array[Byte](20)
     random.nextBytes(ary)
-    ary.map((x : Byte) => x.toHexString ).mkString("")
+    ary.map("%02X" format _).mkString
   }
   
   protected def readFile(file : File) : String = {

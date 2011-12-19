@@ -7,9 +7,7 @@ import org.jboss.{netty => netty}
 import netty.handler.codec.embedder._
 import netty.buffer.ChannelBuffers._
 
-class handshakeDecoderTest extends JUnit4(HandshakeDecoderSpec)
-
-object HandshakeDecoderSpec extends Specification {
+class HandshakeDecoderSpec extends SpecificationWithJUnit {
   "HandshakeDecoder" should {
     "decode name messages" in {
       val decoder = new HandshakeDecoder

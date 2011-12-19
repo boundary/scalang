@@ -8,9 +8,7 @@ import netty.handler.codec.embedder._
 import netty.buffer._
 import netty.buffer.ChannelBuffers._
 
-class handshakeEncoderTest extends JUnit4(HandshakeEncoderSpec)
-
-object HandshakeEncoderSpec extends Specification {
+class HandshakeEncoderSpec extends SpecificationWithJUnit {
   "HandshakeEncoder" should {
     "encode name messages" in {
       val encoder = new HandshakeEncoder

@@ -37,6 +37,10 @@ object EpmdCmd {
 object ReadLine {
   def apply(proc : SysProcess) : String = {
     val read = new BufferedReader(new InputStreamReader(proc.getInputStream))
-    read.readLine
+    val line = read.readLine
+    if(line == null) {
+      throw new RuntimeException("error getting result from escript. ensure that erlang is installed and available on the path.")
+    }
+    line
   }
 }

@@ -244,8 +244,12 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
   
   def createPid : Pid = {
-    val id = pidCount.getAndIncrement
-    val serial = pidSerial.getAndIncrement
+    val id = pidCount.getAndIncrement & 0x7fff
+    
+    val serial = if (id == 0)
+      pidSerial.getAndIncrement & 0x1fff
+    else
+      pidSerial.get & 0x1fff
     Pid(name,id,serial,creation)
   }
   

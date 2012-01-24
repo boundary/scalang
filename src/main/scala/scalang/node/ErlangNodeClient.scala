@@ -30,8 +30,7 @@ class ErlangNodeClient(
     node : ErlangNode,
     peer : Symbol,
     host : String,
-    port : Int,
-    control : Option[Any], 
+    port : Int, 
     typeFactory : TypeFactory, 
     afterHandshake : Channel => Unit) {
   val bootstrap = new ClientBootstrap(
@@ -45,15 +44,18 @@ class ErlangNodeClient(
       val handshakeDecoder = new HandshakeDecoder
       handshakeDecoder.mode = 'challenge //first message on the client side is challenge, not name
       
+      // SOCKET GOES HERE - DOWNSTREAM
+/*      pipeline.addLast("logging", new LoggingHandler)*/
       pipeline.addLast("handshakeFramer", new LengthFieldBasedFrameDecoder(Short.MaxValue, 0, 2, 0, 2))
       pipeline.addLast("handshakeDecoder", handshakeDecoder)
       pipeline.addLast("handshakeEncoder", new HandshakeEncoder)
-      pipeline.addLast("handshakeHandler", new ClientHandshakeHandler(node.name, node.cookie, node.posthandshake))
+      pipeline.addLast("handshakeHandler", new ClientHandshakeHandler(node, node.name, node.cookie, node.posthandshake))
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
       pipeline.addLast("erlangDecoder", new ScalaTermDecoder(peer, typeFactory))
       pipeline.addLast("erlangEncoder", new ScalaTermEncoder)
       pipeline.addLast("erlangHandler", new ErlangHandler(node, afterHandshake))
+      // APP GOES HERE - UPSTREAM
       
       pipeline
     }
@@ -63,11 +65,7 @@ class ErlangNodeClient(
   val channel = future.getChannel
   future.addListener(new ChannelFutureListener {
     def operationComplete(f : ChannelFuture) {
-      if (f.isSuccess) {
-        for (c <- control) {
-          channel.write(c)
-        }
-      } else {
+      if (!f.isSuccess) {
         node.disconnected(peer, channel)
       }
     }

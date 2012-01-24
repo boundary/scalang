@@ -30,7 +30,7 @@ import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 
-class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Symbol,ChannelPipeline) => Unit) extends HandshakeHandler(posthandshake) {
+class ServerHandshakeHandler(node : ErlangNode, name : Symbol, cookie : String, posthandshake : (Symbol,ChannelPipeline) => Unit) extends HandshakeHandler(node, posthandshake) {
   states(
     state('disconnected, { 
       case ConnectedMessage => 'connected
@@ -38,32 +38,38 @@ class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
     
     state('connected, { 
       case msg : NameMessage =>
-        receiveName(msg)
-        sendStatus
-        sendChallenge
-        'challenge_sent
+        if (receiveName(msg)) {
+          sendStatus("ok")
+          sendChallenge
+          'challenge_sent
+        } else {
+          sendStatus("nok")
+          'disconnected
+        }
     }),
     
     state('challenge_sent, { 
       case msg : ChallengeReplyMessage =>
         verifyChallenge(msg)
         sendChallengeAck(msg)
-        drainQueue
         handshakeSucceeded
+        drainQueue
         'verified
     }),
     
     state('verified, { case _ => 'verified}))
 
   //state machine callbacks
-  protected def receiveName(msg : NameMessage) {
+  protected def receiveName(msg : NameMessage) : Boolean = {
+    val channel = ctx.getChannel
     peer = Symbol(msg.name)
+    !node.tryRegisterConnection(peer, channel)
   }
   
-  protected def sendStatus {
+  protected def sendStatus(msg : String) {
     val channel = ctx.getChannel
     val future = Channels.future(channel)
-    ctx.sendDownstream(new DownstreamMessageEvent(channel,future,StatusMessage("ok"),null))
+    ctx.sendDownstream(new DownstreamMessageEvent(channel,future,StatusMessage(msg),null))
   }
   
   protected def sendChallenge {

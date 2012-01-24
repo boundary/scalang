@@ -31,7 +31,7 @@ import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 import com.codahale.logula.Logging
 
-abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit) extends SimpleChannelHandler with StateMachine with Logging {
+abstract class HandshakeHandler(val node : ErlangNode, posthandshake : (Symbol,ChannelPipeline) => Unit) extends SimpleChannelHandler with StateMachine with Logging {
   override val start = 'disconnected
   @volatile var ctx : ChannelHandlerContext = null
   @volatile var peer : Symbol = null
@@ -48,10 +48,11 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
     this.ctx = ctx
     val msg = e.getMessage
     if (isVerified) {
+      log.debug("msg received verified %s", e)
       super.messageReceived(ctx, e)
       return
     }
-    
+    log.debug("msg received not verified %s", e)
     event(msg)
   }
   
@@ -77,8 +78,10 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
   override def writeRequested(ctx : ChannelHandlerContext, e : MessageEvent) {
     this.ctx = ctx
     if (isVerified) {
+      log.debug("verified ", e)
       super.writeRequested(ctx,e)
     } else {
+      log.debug("queue messages %s", e)
       messages.offer(e)
     }
   }
@@ -112,14 +115,27 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
     equals
   }
   
+  protected def close {
+    ctx.getChannel.close
+  }
+  
+  protected def drainInto(channel : Channel) {
+    log.debug("draining into %s", channel)
+    for (msg <- messages) {
+      channel.write(msg)
+    }
+    messages.clear
+  }
+  
   protected def drainQueue {
+    log.debug("drain queue %s", ctx.getChannel)
     val p = ctx.getPipeline
     val keys = p.toMap.keySet
     for (name <- List("handshakeFramer", "handshakeDecoder", "handshakeEncoder", "handshakeHandler"); if keys.contains(name)) {
       p.remove(name)
     }
     posthandshake(peer,p)
-    
+    log.debug("this pipeline %s", p)
     for (msg <- messages) {
       ctx.sendDownstream(msg)
     }

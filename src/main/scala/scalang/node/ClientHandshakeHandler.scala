@@ -30,7 +30,7 @@ import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 
-class ClientHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Symbol,ChannelPipeline) => Unit) extends HandshakeHandler(posthandshake) {
+class ClientHandshakeHandler(node : ErlangNode, name : Symbol, cookie : String, posthandshake : (Symbol,ChannelPipeline) => Unit) extends HandshakeHandler(node, posthandshake) {
   states(
     state('disconnected, {
       case ConnectedMessage =>
@@ -44,8 +44,20 @@ class ClientHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
       case StatusMessage("ok_simultaneous") =>
         'status_ok
       case StatusMessage("alive") => //means the other node sees another conn from us. reconnecting too quick.
-        sendStatus("true")
-        'status_ok
+        // need to check if an existing connection is here
+        node.getConnection(name) match {
+          case Some(channel) =>
+            drainInto(channel)
+            sendStatus("false")
+            throw new ErlangAuthException("simultaneous connections: alive")
+          case None =>
+            //no connection? tell it to kill the other
+            sendStatus("true")
+            'status_ok
+        }
+      case StatusMessage("nok") =>
+        node.getConnection(name).foreach( ch => drainInto(ch) )
+        throw new ErlangAuthException("simultaneous connections: nok")
       case StatusMessage(status) =>
         throw new ErlangAuthException("Bad status message: " + status)
     }),
@@ -60,8 +72,9 @@ class ClientHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
     state('reply_sent, {
       case ChallengeAckMessage(digest) =>
         verifyChallengeAck(digest)
-        drainQueue
         handshakeSucceeded
+        drainQueue
+
         'verified
     }),
     

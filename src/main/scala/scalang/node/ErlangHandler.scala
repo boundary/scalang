@@ -26,13 +26,18 @@ import com.codahale.logula.Logging
 
 class ErlangHandler(
     node : ErlangNode, 
-    afterHandshake : Channel => Unit = { _ => Unit }) extends SimpleChannelUpstreamHandler with Logging {
+    afterHandshake : Channel => Unit = { _ => Unit }) extends SimpleChannelHandler with Logging {
   
   @volatile var peer : Symbol = null
   
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
     log.error(e.getCause, "error caught in erlang handler %s", peer)
     ctx.getChannel.close
+  }
+  
+  override def handleDownstream(ctx : ChannelHandlerContext, e : ChannelEvent) {
+    log.debug("erlanghandler downstream %s", e)
+    super.handleDownstream(ctx, e)
   }
   
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
@@ -45,8 +50,8 @@ class ErlangHandler(
         //not much we can do here?
         ctx.getChannel.close
       case HandshakeSucceeded(name, channel) =>
+        log.debug("succeeded")
         peer = name
-        node.registerConnection(name, channel)
         afterHandshake(channel)
       case LinkMessage(from, to) =>
         log.debug("received link request from %s.", from)
@@ -66,6 +71,13 @@ class ErlangHandler(
   
   override def channelDisconnected(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     log.debug("channel disconnected %s %s. peer: %s", ctx, e, peer)
+    if (peer != null) {
+      node.disconnected(peer, e.getChannel)
+    }
+  }
+  
+  override def channelClosed(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
+    log.debug("channel closed %s %s. peer: %s", ctx, e, peer)
     if (peer != null) {
       node.disconnected(peer, e.getChannel)
     }

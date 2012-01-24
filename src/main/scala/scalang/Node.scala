@@ -189,7 +189,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   var creation : Int = 0
   val processes = new NonBlockingHashMap[Pid,ProcessLike]
   val registeredNames = new NonBlockingHashMap[Symbol,Pid]
-  val channels = new NonBlockingHashMap[Symbol,Channel]
+  val channels = AtomicMap.atomicNBHM[Symbol,Channel]
   val links = AtomicMap.atomicNBHM[Channel,NonBlockingHashSet[Link]]
   val pidCount = new AtomicInteger(0)
   val pidSerial = new AtomicInteger(0)
@@ -421,8 +421,16 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     registeredNames.keySet.toSet.asInstanceOf[Set[Symbol]]
   }
   
-  def registerConnection(name : Symbol, channel : Channel) {
-    channels.put(name, channel)
+  def getConnection(name : Symbol) : Option[Channel] = {
+    channels.get(name)
+  }
+  
+  def connectionExists(name : Symbol) : Boolean = {
+    channels.containsKey(name)
+  }
+  
+  def tryRegisterConnection(name : Symbol, channel : Channel) : Boolean = {
+    null == channels.putIfAbsent(name, channel)
   }
   
   def whereis(regName : Symbol) : Option[Pid] = {
@@ -462,7 +470,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     } else {
       getOrConnectAndSend(to.node, LinkMessage(from, to), { channel =>
         val set = links.getOrElseUpdate(channel, new NonBlockingHashSet[Link])
-/*        println("adding remote link " + link + " to channel " + channel)*/
+        log.debug("adding remote link %s to channel %s", link, channel)
         set.add(link)
       })
     }
@@ -674,6 +682,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       if (links.contains(channel)) {
         val setOption = links.remove(channel)
         for (set <- setOption; link <- set) {
+          log.debug("breaking %s", link)
           remoteBreak(link, 'noconnection)
         }
       }
@@ -681,14 +690,12 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
   
   def getOrConnectAndSend(peer : Symbol, msg : Any, afterHandshake : Channel => Unit = { channel => Unit }) {
-    Option(channels.get(peer)) match {
+    channels.get(peer) match {
       case Some(channel) =>
-        //race during channel shutdown
-        if (channel.isOpen) {
-          channel.write(msg)
-        }
+        channel.write(msg)
         afterHandshake(channel)
-      case None => connectAndSend(peer, Some(msg), afterHandshake)
+      case None =>
+        connectAndSend(peer, Some(msg), afterHandshake)
     }
   }
   
@@ -697,7 +704,14 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       val hostname = splitHostname(peer).getOrElse(throw new ErlangNodeException("Cannot resolve peer with no hostname: " + peer.name))
       val peerName = splitNodename(peer)
       val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
-      val client = new ErlangNodeClient(this, peer, hostname, port, msg, config.typeFactory, afterHandshake)
+      val channel = channels.getOrElseUpdate(peer, {
+        val client = new ErlangNodeClient(this, peer, hostname, port, config.typeFactory, afterHandshake)
+        client.channel
+      })
+      for (m <- msg) {
+        channel.write(m)
+      }
+      afterHandshake(channel)
     } catch {
       case e : Exception =>
         log.debug(e, "Exception in connect and send.")

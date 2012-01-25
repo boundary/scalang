@@ -44,3 +44,14 @@ object ReadLine {
     line
   }
 }
+
+object ReadError {
+  def apply(proc : SysProcess) : String = {
+    val read = new BufferedReader(new InputStreamReader(proc.getErrorStream))
+    val line = read.readLine
+    if(line == null) {
+      throw new RuntimeException("error getting result from escript. ensure that erlang is installed and available on the path.")
+    }
+    line
+  }
+}

@@ -47,6 +47,28 @@ class NodeSpec extends SpecificationWithJUnit {
       node.channels.keySet.toSet must contain(Symbol("test@localhost"))
     }
     
+    "not open two channels in a race" in {
+      println("twooooooo")
+      node = Node(Symbol("scala@localhost"), cookie)
+      erl = Escript("receive_two.escript")
+      ReadLine(erl) //ready
+      Thread.sleep(100)
+      val mbox = node.spawnMbox
+      val pid = mbox.self
+      val threads = Seq(1,2).map { n =>
+        new Thread {
+          override def run {
+            //if (n == 1)             Thread.sleep(100)
+            node.getOrConnectAndSend(Symbol("test@localhost"), RegSend(pid,'receiver,(n,pid)))
+          }
+        }
+      }
+      threads.foreach( t => t.start )
+      threads.foreach( t => t.join )
+      mbox.receive
+      mbox.receive
+    }
+    
     "accept pings" in {
       node = Node(Symbol("scala@localhost"), cookie)
       erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_adm:ping('scala@localhost')])."))

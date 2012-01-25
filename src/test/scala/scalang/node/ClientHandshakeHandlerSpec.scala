@@ -1,5 +1,6 @@
 package scalang.node
 
+import scalang._
 import org.specs._
 import org.specs.runner._
 import org.jboss.{netty => netty}
@@ -7,14 +8,25 @@ import netty.buffer._
 import netty.channel._
 import java.security.MessageDigest
 import netty.handler.codec.embedder.TwoWayCodecEmbedder
+import java.lang.{Process => JProc}
 
 class ClientHandshakeHandlerSpec extends SpecificationWithJUnit {
   val cookie = "DRSJLFJLGIYPEAVFYFCY"
   val node = Symbol("tmp@moonpolysoft.local")
+  var epmd : JProc = null
   
   "ClientHandshakeHandler" should {
+    doBefore {
+      epmd = EpmdCmd()
+    }
+
+    doAfter {
+      epmd.destroy
+      epmd.waitFor
+    }
+    
     "complete a standard handshake" in {
-      val handshake = new ClientHandshakeHandler(node, cookie, { (peer : Symbol, p : ChannelPipeline) =>
+      val handshake = new ClientHandshakeHandler(Node(node, cookie), node, cookie, { (peer : Symbol, p : ChannelPipeline) =>
         
       })
       val embedder = new TwoWayCodecEmbedder[Any](handshake)

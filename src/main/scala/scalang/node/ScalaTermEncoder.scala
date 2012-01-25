@@ -31,7 +31,6 @@ import com.codahale.logula.Logging
 class ScalaTermEncoder extends OneToOneEncoder with Logging {
   
   override def encode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
-    log.debug("sending msg %s", obj)
     val buffer = ChannelBuffers.dynamicBuffer(512)
     //write distribution header
     buffer.writeBytes(ByteArray(112,131))
@@ -53,6 +52,7 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
         buffer.writeByte(131)
         encodeObject(buffer, msg)
     }
+    log.debug("encoding msg %s from %s into %s", obj, ctx.getChannel, buffer.hashCode)
     
     buffer
   }

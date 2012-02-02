@@ -179,6 +179,7 @@
               <artifactSet>
                 <excludes>
                   <exclude>junit:junit</exclude>
+                  <exclude>org.scala-lang:scala-library</exclude>
                 </excludes>
               </artifactSet>
             </configuration>

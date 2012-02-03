@@ -64,8 +64,10 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
       writeInteger(buffer, i)
     case l : Long =>
       writeLong(buffer, l)
+    case f : Float =>
+      writeFloat(buffer, f)
     case d : Double =>
-      writeStringFloat(buffer, d)
+      writeFloat(buffer, d)
     case s : Symbol =>
       writeAtom(buffer, s)
     case Reference(node, id, creation) => //we only emit new references
@@ -197,6 +199,11 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
   def writeInteger(buffer : ChannelBuffer, i : Int) {
     buffer.writeByte(98)
     buffer.writeInt(i)
+  }
+  
+  def writeFloat(buffer : ChannelBuffer, d : Double) {
+    buffer.writeByte(70)
+    buffer.writeLong(java.lang.Double.doubleToLongBits(d))
   }
   
   def writeStringFloat(buffer : ChannelBuffer, d : Double) {

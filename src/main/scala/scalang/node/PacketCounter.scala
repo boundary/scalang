@@ -4,7 +4,7 @@ import org.jboss.netty
 import netty.bootstrap._
 import netty.channel._
 import netty.handler.codec.frame._
-import com.yammer.metrics._
+import com.yammer.metrics.scala._
 import java.util.concurrent._
 
 class PacketCounter(name : String) extends SimpleChannelHandler with Instrumented {

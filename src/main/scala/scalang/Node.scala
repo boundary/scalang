@@ -39,7 +39,7 @@ import com.codahale.logula.Logging
 import org.apache.log4j.Level
 import org.jboss.netty.logging._
 import netty.util.HashedWheelTimer
-import com.yammer.metrics._
+import com.yammer.metrics.scala._
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")

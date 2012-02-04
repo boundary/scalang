@@ -22,7 +22,7 @@ import java.nio._
 import netty.buffer._
 import scala.annotation.tailrec
 import scalang._
-import com.yammer.metrics._
+import com.yammer.metrics.scala._
 import scala.collection.mutable.ArrayBuffer
 import overlock.cache.CachedSymbol
 import sun.misc.Unsafe

@@ -22,7 +22,8 @@ import org.jetlang.channels._
 import org.jetlang.core._
 import com.codahale.logula.Logging
 import java.util.concurrent.TimeUnit
-import com.yammer.metrics._
+import com.yammer.metrics.scala._
+import scala._
 
 abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging with Instrumented {
   val self = ctx.pid

@@ -24,6 +24,7 @@ import netty.buffer._
 import scala.annotation.tailrec
 import scalang._
 import java.util.{Formatter, Locale}
+import java.util.{List => JList}
 import scalang.util.ByteArray
 import scalang.util.CamelToUnder._
 import com.codahale.logula.Logging
@@ -110,6 +111,8 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
       buffer.writeByte(106)
     case l : List[Any] =>
       writeList(buffer, l, Nil)
+    case l : JList[Any] =>
+      writeJList(buffer, l, Nil)
     case b : BigInteger =>
       writeBigInt(buffer, b)
     case a : Array[Byte] =>
@@ -180,6 +183,16 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
     buffer.writeInt(list.size)
     for (element <- list) {
       encodeObject(buffer, element)
+    }
+    encodeObject(buffer, tail)
+  }
+  
+  def writeJList(buffer : ChannelBuffer, list : JList[Any], tail : Any) {
+    buffer.writeByte(108)
+    buffer.writeInt(list.size)
+    val i = list.iterator()
+    while(i.hasNext) {
+      encodeObject(buffer, i.next())
     }
     encodeObject(buffer, tail)
   }

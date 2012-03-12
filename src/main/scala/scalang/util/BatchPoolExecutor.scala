@@ -4,6 +4,7 @@ import org.jetlang.core._
 import java.util._
 import java.util.concurrent._
 import overlock.threadpool._
+import sun.util.logging.resources.logging
 
 class BatchPoolExecutor(path : String, 
   name : String, 
@@ -17,12 +18,21 @@ class BatchPoolExecutor(path : String,
     BatchExecutor {
   
   override def execute(reader : EventReader) {
+
+    // queue tasks up to run sequentially
+    val tasks = new ArrayList[Runnable](reader.size())
+    var i = 0
+    while(i < reader.size()) {
+      tasks.add(reader.get(i))
+      i = i + 1
+    }
+
+    // but run them in the thread pool
     execute(new Runnable {
-      def run {
-        var i = 0
-        while (i < reader.size) {
-          reader.get(i).run
-          i += 1
+      def run() {
+        val ti = tasks.iterator()
+        while(ti.hasNext) {
+          ti.next().run()
         }
       }
     })

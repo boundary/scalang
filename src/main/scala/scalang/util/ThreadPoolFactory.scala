@@ -70,7 +70,7 @@ class DefaultThreadPoolFactory extends ThreadPoolFactory {
       queue.executor = pool
       pool
     } else {
-      return batchExecutor
+      batchExecutor
     }
   }
   

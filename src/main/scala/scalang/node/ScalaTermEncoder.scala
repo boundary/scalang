@@ -114,10 +114,10 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
       writeList(buffer, list, tail)
     case Nil =>
       buffer.writeByte(106)
-    case l : List[Any] =>
-      writeList(buffer, l, Nil)
     case l : JList[Any] =>
       writeJList(buffer, l, Nil)
+    case l : List[Any] =>
+      writeList(buffer, l, Nil)
     case b : BigInteger =>
       writeBigInt(buffer, b)
     case a : Array[Byte] =>

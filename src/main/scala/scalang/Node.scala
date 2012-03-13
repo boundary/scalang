@@ -88,15 +88,18 @@ object Node {
   
   protected def readFile(file : File) : String = {
     val in = new BufferedReader(new FileReader(file))
-    val cookie = in.readLine
-    in.close
-    cookie
+    try
+      in.readLine
+    finally
+      in.close
   }
   
   protected def writeCookie(file : File, cookie : String) {
     val out = new FileWriter(file)
-    out.write(cookie)
-    out.close
+    try
+      out.write(cookie)
+    finally
+      out.close
   }
 }
 

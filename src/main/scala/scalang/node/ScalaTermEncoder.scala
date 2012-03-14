@@ -21,9 +21,8 @@ import netty.channel._
 import java.nio._
 import java.math.BigInteger
 import netty.buffer._
-import scala.annotation.tailrec
 import scalang._
-import java.util.{Formatter, Locale}
+import java.util.Formatter
 import java.util.{List => JList}
 import scalang.util.ByteArray
 import scalang.util.CamelToUnder._
@@ -35,9 +34,12 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
   val encodeTimer = metrics.timer("encoding", peer.name)
 
   override def encode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
-    log.debug("sending msg %s", obj)
+    log.trace("sending msg %s", obj)
     encodeTimer.time {
-      val buffer = ChannelBuffers.dynamicBuffer(512)
+//      val buffer = ChannelBuffers.dynamicBuffer(512)
+      val buffer = ScalaTermEncoder.buffer.get()
+      // reset read and write pointers to 0 without affecting buffer contents
+      buffer.clear()
       //write distribution header
       buffer.writeBytes(ByteArray(112,131))
       obj match {
@@ -58,7 +60,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
           buffer.writeByte(131)
           encodeObject(buffer, msg)
       }
-
+      buffer.
       buffer
     }
   }
@@ -264,6 +266,15 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
     }
     for (element <- tuple.productIterator) {
       encodeObject(buffer, element)
+    }
+  }
+}
+
+object ScalaTermEncoder extends Logging {
+  lazy val buffer = new ThreadLocal[ChannelBuffer] {
+    override def initialValue = {
+      log.debug("allocating new ChannelBuffer")
+      ChannelBuffers.dynamicBuffer(512)
     }
   }
 }

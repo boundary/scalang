@@ -5,7 +5,7 @@
     <name>scalang</name>
     <artifactId>scalang-scala_2.9.1</artifactId>
     <packaging>jar</packaging>
-    <version>0.12</version>
+    <version>0.13-SNAPSHOT</version>
     <properties>
         <scala.version>2.9.1</scala.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -19,7 +19,7 @@
         <dependency>
           <groupId>com.yammer.metrics</groupId>
           <artifactId>metrics-scala_${scala.version}</artifactId>
-          <version>2.0.0-RC0</version>
+          <version>2.0.3</version>
         </dependency>
         <dependency>
             <groupId>org.jetlang</groupId>

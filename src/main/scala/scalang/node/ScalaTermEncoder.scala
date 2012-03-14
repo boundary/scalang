@@ -60,7 +60,6 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
           buffer.writeByte(131)
           encodeObject(buffer, msg)
       }
-      buffer.
       buffer
     }
   }

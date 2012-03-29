@@ -5,7 +5,7 @@
     <name>scalang</name>
     <artifactId>scalang-scala_2.9.1</artifactId>
     <packaging>jar</packaging>
-    <version>0.10</version>
+    <version>0.13</version>
     <properties>
         <scala.version>2.9.1</scala.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -14,12 +14,7 @@
         <dependency>
             <groupId>com.boundary</groupId>
             <artifactId>overlock-scala_${scala.version}</artifactId>
-            <version>0.6.0</version>
-        </dependency>
-        <dependency>
-          <groupId>com.yammer.metrics</groupId>
-          <artifactId>metrics-scala_${scala.version}</artifactId>
-          <version>2.0.0-RC0</version>
+            <version>0.7</version>
         </dependency>
         <dependency>
             <groupId>org.jetlang</groupId>
@@ -37,11 +32,6 @@
             <version>4.8.2</version>
             <scope>test</scope>
         </dependency>
-        <!-- <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>2.9.1</version>
-        </dependency> -->
         <dependency>
             <groupId>org.scala-tools.testing</groupId>
             <artifactId>specs_${scala.version}</artifactId>
@@ -50,11 +40,6 @@
         </dependency>
     </dependencies>
     <repositories>
-        <!--<repository>-->
-            <!--<id>CodasRepo</id>-->
-            <!--<name>Coda's Repo</name>-->
-            <!--<url>http://repo.codahale.com/</url>-->
-        <!--</repository>-->
         <repository>
             <id>JetLangRepository</id>
             <name>Jet Lang Repository</name>
@@ -166,32 +151,6 @@
           </excludes>
         </configuration>
       </plugin>
-
-<!--      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>1.4</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-              </transformers>
-              <artifactSet>
-                <excludes>
-                  <exclude>junit:junit</exclude>
-                  <exclude>org.scala-lang:scala-library</exclude>
-                </excludes>
-              </artifactSet>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin> -->
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
@@ -206,7 +165,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>cobertura-maven-plugin</artifactId>
@@ -223,7 +181,6 @@
           </execution>
         </executions>
       </plugin>
-
     </plugins>
   </build>
   <reporting>
@@ -235,5 +192,4 @@
       </plugin>
     </plugins>
   </reporting>
-	
 </project>

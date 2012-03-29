@@ -24,37 +24,43 @@ import netty.buffer._
 import scala.annotation.tailrec
 import scalang._
 import java.util.{Formatter, Locale}
+import java.util.{List => JList}
 import scalang.util.ByteArray
 import scalang.util.CamelToUnder._
 import com.codahale.logula.Logging
+import com.yammer.metrics.scala._
 
-class ScalaTermEncoder extends OneToOneEncoder with Logging {
-  
+class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with Instrumented {
+
+  val encodeTimer = metrics.timer("encoding", peer.name)
+
   override def encode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
     log.debug("sending msg %s", obj)
-    val buffer = ChannelBuffers.dynamicBuffer(512)
-    //write distribution header
-    buffer.writeBytes(ByteArray(112,131))
-    obj match {
-      case Tock =>
-        buffer.clear
-      case LinkMessage(from, to) =>
-        encodeObject(buffer, (1, from, to))
-      case SendMessage(to, msg) =>
-        encodeObject(buffer, (2, Symbol(""), to))
-        buffer.writeByte(131)
-        encodeObject(buffer, msg)
-      case ExitMessage(from, to, reason) =>
-        encodeObject(buffer, (3, from, to, reason))
-      case UnlinkMessage(from, to) =>
-        encodeObject(buffer, (4, from, to))
-      case RegSend(from, to, msg) =>
-        encodeObject(buffer, (6, from, Symbol(""), to))
-        buffer.writeByte(131)
-        encodeObject(buffer, msg)
+    encodeTimer.time {
+      val buffer = ChannelBuffers.dynamicBuffer(512)
+      //write distribution header
+      buffer.writeBytes(ByteArray(112,131))
+      obj match {
+        case Tock =>
+          buffer.clear()
+        case LinkMessage(from, to) =>
+          encodeObject(buffer, (1, from, to))
+        case SendMessage(to, msg) =>
+          encodeObject(buffer, (2, Symbol(""), to))
+          buffer.writeByte(131)
+          encodeObject(buffer, msg)
+        case ExitMessage(from, to, reason) =>
+          encodeObject(buffer, (3, from, to, reason))
+        case UnlinkMessage(from, to) =>
+          encodeObject(buffer, (4, from, to))
+        case RegSend(from, to, msg) =>
+          encodeObject(buffer, (6, from, Symbol(""), to))
+          buffer.writeByte(131)
+          encodeObject(buffer, msg)
+      }
+
+      buffer
     }
-    
-    buffer
   }
   
   def encodeObject(buffer : ChannelBuffer, obj : Any) : Unit = obj match {
@@ -108,6 +114,8 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
       writeList(buffer, list, tail)
     case Nil =>
       buffer.writeByte(106)
+    case l : JList[Any] =>
+      writeJList(buffer, l, Nil)
     case l : List[Any] =>
       writeList(buffer, l, Nil)
     case b : BigInteger =>
@@ -180,6 +188,16 @@ class ScalaTermEncoder extends OneToOneEncoder with Logging {
     buffer.writeInt(list.size)
     for (element <- list) {
       encodeObject(buffer, element)
+    }
+    encodeObject(buffer, tail)
+  }
+  
+  def writeJList(buffer : ChannelBuffer, list : JList[Any], tail : Any) {
+    buffer.writeByte(108)
+    buffer.writeInt(list.size)
+    val i = list.iterator()
+    while(i.hasNext) {
+      encodeObject(buffer, i.next())
     }
     encodeObject(buffer, tail)
   }

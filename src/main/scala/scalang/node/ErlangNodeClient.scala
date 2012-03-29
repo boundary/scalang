@@ -52,7 +52,7 @@ class ErlangNodeClient(
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
       pipeline.addLast("erlangDecoder", new ScalaTermDecoder(peer, typeFactory))
-      pipeline.addLast("erlangEncoder", new ScalaTermEncoder)
+      pipeline.addLast("erlangEncoder", new ScalaTermEncoder(peer))
       pipeline.addLast("erlangHandler", new ErlangHandler(node, afterHandshake))
       
       pipeline

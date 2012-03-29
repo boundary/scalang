@@ -535,7 +535,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     val (ref,c) = makeCall(from, msg)
     val channel = makeReplyChannel(from, ref)
     send(to, c)
-    waitReply(channel, timeout)
+    waitReply(from, ref, channel, timeout)
   }
   
   def call(to : Symbol, msg : Any) : Any = call(createPid, to, msg)
@@ -545,7 +545,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     val (ref,c) = makeCall(from, msg)
     val channel = makeReplyChannel(from, ref)
     send(to, c)
-    waitReply(channel, timeout)
+    waitReply(from, ref, channel, timeout)
   }
   
   def call(to : (Symbol,Symbol), msg : Any) = call(createPid, to, msg)
@@ -555,7 +555,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     val (ref,c) = makeCall(from, msg)
     val channel = makeReplyChannel(from, ref)
     send(to, from, c)
-    waitReply(channel, timeout)
+    waitReply(from, ref, channel, timeout)
   }
   
   def cast(to : Pid, msg : Any) = send(to, (Symbol("$gen_cast"), msg))
@@ -568,9 +568,11 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     queue
   }
   
-  def waitReply(channel : BlockingQueue[Any], timeout : Long) : Any = {
+  def waitReply(from : Pid, ref : Reference, channel : BlockingQueue[Any], timeout : Long) : Any = {
     channel.poll(timeout, TimeUnit.MILLISECONDS) match {
-      case null => ('error, 'timeout)
+      case null =>
+        removeReplyQueue(from,ref)
+        ('error, 'timeout)
       case response => response
     }
   }

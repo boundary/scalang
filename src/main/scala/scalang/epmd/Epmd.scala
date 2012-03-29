@@ -66,10 +66,6 @@ class Epmd(val host : String, val port : Int) {
     bootstrap.releaseExternalResources
   }
   
-  override def finalize {
-    close
-  }
-  
   def alive(portNo : Int, nodeName : String) : Option[Int] = {
     channel.write(AliveReq(portNo,nodeName))
     val response = handler.response.call.asInstanceOf[AliveResp]

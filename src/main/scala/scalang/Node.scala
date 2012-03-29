@@ -215,10 +215,6 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
   }
   
-  override def finalize {
-    shutdown
-  }
-  
   def spawnMbox : Mailbox = {
     val p = createPid
     val n = this

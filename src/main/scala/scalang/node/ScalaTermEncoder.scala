@@ -74,6 +74,10 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
       writeFloat(buffer, f)
     case d : Double =>
       writeFloat(buffer, d)
+    case true =>
+      writeAtom(buffer, 'true)
+    case false =>
+      writeAtom(buffer, 'false)
     case s : Symbol =>
       writeAtom(buffer, s)
     case Reference(node, id, creation) => //we only emit new references

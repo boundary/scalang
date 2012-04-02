@@ -91,6 +91,6 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
   }
   
   def unlink(to : Pid) {
-    links.remove(to)
+    links.remove(Link(self, to))
   }
 }

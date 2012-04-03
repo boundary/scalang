@@ -91,6 +91,8 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         buffer.skipBytes(1)
         val msg = readTerm(buffer)
         RegSend(from, to, msg)
+      case (8, from : Pid, to : Pid, reason : Any) =>
+        Exit2Message(from, to, reason)
     }
   }
   

@@ -150,5 +150,74 @@ class NodeSpec extends SpecificationWithJUnit {
       Thread.sleep(100)
       node.isAlive(mbox.self) must ==(false)
     }
+
+    "deliver local monitor exits" in {
+      node = Node(Symbol("scala@localhost"), cookie)
+      val monitorProc = node.spawn[MonitorProcess]
+      val failProc = node.spawn[FailProcess]
+      val mbox = node.spawnMbox
+      node.send(monitorProc, (failProc, mbox.self))
+      Thread.sleep(100)
+      mbox.receive must ==('ok)
+      node.send(failProc, 'fail)
+      Thread.sleep(100)
+      mbox.receive must ==('monitor_exit)
+      node.isAlive(failProc) must ==(false)
+      node.isAlive(monitorProc) must ==(true)
+    }
+
+    "deliver remote monitor exits" in {
+      node = Node(Symbol("scala@localhost"), cookie)
+      val mbox = node.spawnMbox('mbox)
+      val scala = node.spawnMbox('scala)
+      erl = Escript("monitor.escript")
+      val remotePid = mbox.receive.asInstanceOf[Pid]
+
+      // tell remote node to monitor our mbox.
+      node.send(remotePid, ('monitor, mbox.self))
+      val remoteRef = scala.receive.asInstanceOf[Reference]
+
+      // kill our mbox and await notification from remote node.
+      mbox.exit('blah)
+      scala.receive must ==(('down, 'blah))
+    }
+
+    "don't deliver remote monitor exit after demonitor" in {
+      node = Node(Symbol("scala@localhost"), cookie)
+      val mbox = node.spawnMbox('mbox)
+      val scala = node.spawnMbox('scala)
+      erl = Escript("monitor.escript")
+      val remotePid = mbox.receive.asInstanceOf[Pid]
+
+      // tell remote node to monitor our mbox.
+      node.send(remotePid, ('monitor, mbox.self))
+      val remoteRef = scala.receive.asInstanceOf[Reference]
+
+      // tell remote node to stop monitoring our mbox.
+      node.send(remotePid, ('demonitor, remoteRef))
+      scala.receive must ==(('demonitor, remoteRef))
+
+      // kill our mbox and expect no notification from remote node.
+      mbox.exit('blah)
+      scala.receive(100) must ==(None)
+    }
+
+    "receive remote monitor exits" in {
+      node = Node(Symbol("scala@localhost"), cookie)
+      val monitorProc = node.spawn[MonitorProcess]
+      val mbox = node.spawnMbox('mbox)
+      val scala = node.spawn[MonitorProcess]('scala)
+      erl = Escript("monitor.escript")
+      val remotePid = mbox.receive.asInstanceOf[Pid]
+
+      node.send(monitorProc, (remotePid, mbox.self))
+      Thread.sleep(100)
+      mbox.receive must ==('ok)
+      node.send(monitorProc, ('exit, 'blah))
+      Thread.sleep(100)
+      mbox.receive must ==('monitor_exit)
+      node.isAlive(monitorProc) must ==(true)
+  }
+
   }
 }

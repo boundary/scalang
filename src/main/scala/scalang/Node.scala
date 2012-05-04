@@ -182,6 +182,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     with ExitListener
     with SendListener
     with LinkListener
+    with MonitorListener
     with ReplyRegistry
     with Instrumented
     with Logging {
@@ -195,6 +196,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   val registeredNames = new NonBlockingHashMap[Symbol,Pid]
   val channels = AtomicMap.atomicNBHM[Symbol,Channel]
   val links = AtomicMap.atomicNBHM[Channel,NonBlockingHashSet[Link]]
+  val monitors = AtomicMap.atomicNBHM[Channel,NonBlockingHashSet[Monitor]]
   val pidCount = new AtomicInteger(0)
   val pidSerial = new AtomicInteger(0)
   val executor = poolFactory.createActorPool
@@ -232,6 +234,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     box.addExitListener(this)
     box.addSendListener(this)
     box.addLinkListener(this)
+    box.addMonitorListener(this)
     processes.put(p, box)
     box
   }
@@ -268,6 +271,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     process.addExitListener(this)
     process.addSendListener(this)
     process.addLinkListener(this)
+    process.addMonitorListener(this)
     process.fiber.start
     process.start
     p
@@ -291,6 +295,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     process.addExitListener(this)
     process.addSendListener(this)
     process.addLinkListener(this)
+    process.addMonitorListener(this)
     process.fiber.start
     process.start
     p
@@ -385,6 +390,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     process.addExitListener(this)
     process.addSendListener(this)
     process.addLinkListener(this)
+    process.addMonitorListener(this)
     processes.put(p, process)
     process.fiber.start
     process
@@ -404,6 +410,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     process.addExitListener(this)
     process.addSendListener(this)
     process.addLinkListener(this)
+    process.addMonitorListener(this)
     processes.put(p, process)
     process.fiber.start
     process
@@ -521,6 +528,83 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       case None =>
         if (!isLocal(to))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
+    }
+  }
+
+  def deliverMonitor(monitor : Monitor) {
+    val from = monitor.from
+    val to = monitor.to
+    var ref = monitor.ref
+    log.debug("deliverMonitor %s -> %s (%s)", from, to, ref)
+    if (from == to) {
+      log.warn("A process tried to monitor itself: %s", from)
+      return
+    }
+
+    if (isLocal(to)) {
+      for (p <- process(to)) {
+        p.registerMonitor(from, ref)
+      }
+    } else {
+      getOrConnectAndSend(to.node, MonitorMessage(from, to, ref), { channel =>
+        val set = monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor])
+        set.add(monitor)
+      })
+    }
+  }
+
+  def monitorWithoutNotify(from : Pid, to : Pid, ref : Reference, channel : Channel) {
+    log.debug("monitor %s -> %s (%s)", from, to, ref)
+    if (from == to) {
+      log.warn("Trying to monitor itself: %s", from)
+      return
+    }
+
+    if (!isLocal(from) && !isLocal(to)) {
+      log.warn("Try to monitor between non-local pids: %s -> %s", from, to)
+      return
+    }
+
+    process(to) match {
+      case Some(p) =>
+        val monitor = p.registerMonitor(from, ref)
+        if (!isLocal(to))
+          monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor]).add(monitor)
+      case None =>
+        if (!isLocal(to))
+          monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor]).add(Monitor(from, to, ref))
+    }
+  }
+
+
+  //node internal interface
+  def demonitor(from : Pid, to : Pid, ref : Reference) {
+    log.debug("demonitor %s -> %s (%s)", from, to, ref)
+    for (p <- process(to)) {
+      p.demonitor(ref)
+    }
+  }
+
+  def monitorExit(monitor : Monitor, reason : Any) {
+    val from = monitor.from
+    val to = monitor.to
+    val ref = monitor.ref
+    if (isLocal(from)) {
+      for (proc <- process(from)) {
+        proc.handleMonitorExit(to, ref, reason)
+      }
+    } else {
+      getOrConnectAndSend(from.node, MonitorExitMessage(from, to, ref, reason))
+    }
+  }
+
+  def remoteMonitorExit(monitor : Monitor, reason : Any) {
+    val from = monitor.from
+    val to = monitor.to
+    val ref = monitor.ref
+    for (proc <- process(from)) {
+      proc.monitors.remove(monitor)
+      proc.handleMonitorExit(to, ref, reason)
     }
   }
 
@@ -689,6 +773,13 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         val setOption = links.remove(channel)
         for (set <- setOption; link <- set) {
           remoteBreak(link, 'noconnection)
+        }
+      }
+      //must send all monitor exits too
+      if (monitors.contains(channel)) {
+        val setOption = monitors.remove(channel)
+        for (set <- setOption; monitor <- set) {
+          remoteMonitorExit(monitor, 'noconnection)
         }
       }
     }

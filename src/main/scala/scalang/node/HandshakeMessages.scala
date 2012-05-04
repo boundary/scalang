@@ -65,7 +65,7 @@ object DistributionFlags {
   val newFloats = 0x800
 
   val default = extendedReferences | extendedPidsPorts |
-    bitBinaries | newFloats | funTags | newFunTags
+    bitBinaries | newFloats | funTags | newFunTags | distMonitor
 }
 
 class ErlangAuthException(msg : String) extends Exception(msg)

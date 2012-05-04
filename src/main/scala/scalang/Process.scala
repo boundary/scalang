@@ -100,6 +100,12 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
     exit(msg)
   }
 
+  /**
+   * Subclasses wishing to trap monitor exits should override this method.
+   */
+  def trapMonitorExit(pid : Pid, ref : Reference, reason : Any) {
+  }
+
   override def handleMessage(msg : Any) {
     messageRate.mark
     msgChannel.publish(msg)
@@ -107,6 +113,10 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
 
   override def handleExit(from : Pid, msg : Any) {
     exitChannel.publish((from,msg))
+  }
+
+  override def handleMonitorExit(pid : Pid, ref : Reference, reason : Any) {
+    monitorChannel.publish((pid,ref,reason))
   }
 
   val p = this
@@ -137,6 +147,20 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
       }
     }
   })
+
+  val monitorChannel = new MemoryChannel[(Pid,Reference,Any)]
+  monitorChannel.subscribe(ctx.fiber, new Callback[(Pid,Reference,Any)] {
+    def onMessage(msg : (Pid,Reference,Any)) {
+      try {
+        trapMonitorExit(msg._1, msg._2, msg._3)
+      } catch {
+        case e : Throwable =>
+          log.error(e, "An error occurred during handleMonitorExit in actor %s", this)
+          exit(e.getMessage)
+      }
+    }
+  })
+
 }
 
 class PidSend(to : Pid, proc : Process) {

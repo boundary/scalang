@@ -61,6 +61,12 @@ class ErlangHandler(
         node.unlink(from, to)
       case RegSend(from, to, msg) =>
         node.handleSend(to, msg)
+      case MonitorMessage(from, to, ref) =>
+        node.monitorWithoutNotify(from, to, ref, e.getChannel)
+      case DemonitorMessage(from, to, ref) =>
+        node.demonitor(from, to, ref)
+      case MonitorExitMessage(from, to, ref, reason) =>
+        node.remoteMonitorExit(Monitor(from, to, ref), reason)
     }
   }
 

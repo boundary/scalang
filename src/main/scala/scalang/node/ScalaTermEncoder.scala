@@ -64,7 +64,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
         case DemonitorMessage(from, to, ref) =>
           encodeObject(buffer, (20, from, to, ref))
         case MonitorExitMessage(from, to, ref, reason) =>
-          encodeObject(buffer, (21, from, to, ref))
+          encodeObject(buffer, (21, from, to, ref, reason))
       }
 
       buffer

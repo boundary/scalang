@@ -15,7 +15,7 @@ class NodeSpec extends SpecificationWithJUnit {
     doBefore {
       epmd = EpmdCmd()
     }
-    
+
     doAfter {
       epmd.destroy
       epmd.waitFor
@@ -25,9 +25,9 @@ class NodeSpec extends SpecificationWithJUnit {
         erl.waitFor
       }
     }
-    
+
     val cookie = "test"
-    
+
     "get connections from a remote node" in {
       node = Node(Symbol("test@localhost"), cookie)
       erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_kernel:connect_node('test@localhost')])."))
@@ -35,7 +35,7 @@ class NodeSpec extends SpecificationWithJUnit {
       read.readLine
       node.channels.keySet.toSet must contain(Symbol("tmp@localhost"))
     }
-    
+
     "connect to a remote node" in {
       node = Node(Symbol("scala@localhost"), cookie)
       erl = Escript("receive_connection.escript")
@@ -46,7 +46,7 @@ class NodeSpec extends SpecificationWithJUnit {
       result must ==("scala@localhost")
       node.channels.keySet.toSet must contain(Symbol("test@localhost"))
     }
-    
+
     "accept pings" in {
       node = Node(Symbol("scala@localhost"), cookie)
       erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_adm:ping('scala@localhost')])."))
@@ -54,7 +54,7 @@ class NodeSpec extends SpecificationWithJUnit {
       result must ==("pong")
       node.channels.keySet.toSet must contain(Symbol("tmp@localhost"))
     }
-    
+
     "send pings" in {
       node = Node(Symbol("scala@localhost"), cookie)
       erl = Escript("receive_connection.escript")
@@ -74,7 +74,7 @@ class NodeSpec extends SpecificationWithJUnit {
       node.send('echo, (mbox.self, 'blah))
       mbox.receive must ==('blah)
     }
-    
+
     "send remote regname" in {
       node = Node(Symbol("scala@localhost"), cookie)
       erl = Escript("echo.escript")
@@ -83,7 +83,7 @@ class NodeSpec extends SpecificationWithJUnit {
       node.send(('echo, Symbol("test@localhost")), mbox.self, (mbox.self, 'blah))
       mbox.receive must ==('blah)
     }
-    
+
     "receive remove regname" in {
       node = Node(Symbol("scala@localhost"), cookie)
       erl = Escript("echo.escript")
@@ -92,7 +92,7 @@ class NodeSpec extends SpecificationWithJUnit {
       node.send(('echo, Symbol("test@localhost")), mbox.self, (('mbox, Symbol("scala@localhost")), 'blah))
       mbox.receive must ==('blah)
     }
-    
+
     "remove processes on exit" in {
       node = Node(Symbol("scala@localhost"), cookie)
       val pid = node.spawn[FailProcess]
@@ -101,7 +101,7 @@ class NodeSpec extends SpecificationWithJUnit {
       Thread.sleep(100)
       Option(node.processes.get(pid)) must beNone
     }
-    
+
     "deliver local breakages" in {
       node = Node(Symbol("scala@localhost"), cookie)
       val linkProc = node.spawn[LinkProcess]
@@ -115,7 +115,7 @@ class NodeSpec extends SpecificationWithJUnit {
       node.isAlive(failProc) must ==(false)
       node.isAlive(linkProc) must ==(false)
     }
-    
+
     "deliver remote breakages" in {
       node = Node(Symbol("scala@localhost"), cookie)
       val mbox = node.spawnMbox('mbox)
@@ -126,7 +126,7 @@ class NodeSpec extends SpecificationWithJUnit {
       mbox.exit('blah)
       scala.receive must ==('blah)
     }
-    
+
     "deliver local breakages" in {
       node = Node(Symbol("scala@localhost"), cookie)
       val mbox = node.spawnMbox('mbox)
@@ -137,7 +137,7 @@ class NodeSpec extends SpecificationWithJUnit {
       Thread.sleep(200)
       node.isAlive(mbox.self) must ==(false)
     }
-    
+
     "deliver breaks on channel disconnect" in {
       println("discon")
       node = Node(Symbol("scala@localhost"), cookie)

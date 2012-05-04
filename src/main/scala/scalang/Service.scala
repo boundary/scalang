@@ -33,28 +33,28 @@ abstract class Service[A <: Product](ctx : ServiceContext[A]) extends Process(ct
 /*  def init(args : Any) {
     // noop
   }
-*/  
+*/
   /**
    * Handle a call style of message which will expect a response.
    */
   def handleCall(tag : (Pid,Reference), request : Any) : Any = {
     throw new Exception(getClass + " did not define a call handler.")
   }
-  
+
   /**
    * Handle a cast style of message which will receive no response.
    */
   def handleCast(request : Any) {
     throw new Exception(getClass + " did not define a cast handler.")
   }
-  
+
   /**
    * Handle any messages that do not fit the call or cast pattern.
    */
   def handleInfo(request : Any) {
     throw new Exception(getClass + " did not define an info handler.")
   }
-  
+
   override def onMessage(msg : Any) = msg match {
     case ('ping, from : Pid, ref : Reference) =>
       from ! ('pong, ref)
@@ -72,16 +72,16 @@ abstract class Service[A <: Product](ctx : ServiceContext[A]) extends Process(ct
     case _ =>
       handleInfo(msg)
   }
-  
+
   def call(to : Pid, msg : Any) : Any = node.call(self,to,msg)
   def call(to : Pid, msg : Any, timeout : Long) : Any = node.call(self,to,msg,timeout)
   def call(to : Symbol, msg : Any) : Any = node.call(self,to,msg)
   def call(to : Symbol, msg : Any, timeout : Long) : Any = node.call(self,to,msg,timeout)
   def call(to : (Symbol,Symbol), msg : Any) : Any = node.call(self,to,msg)
   def call(to : (Symbol,Symbol), msg : Any, timeout : Long) : Any = node.call(self,to,msg,timeout)
-  
+
   def cast(to : Pid, msg : Any) = node.cast(to,msg)
   def cast(to : Symbol, msg : Any) = node.cast(to,msg)
   def cast(to : (Symbol,Symbol), msg : Any) = node.cast(to,msg)
-  
+
 }

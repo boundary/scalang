@@ -21,7 +21,7 @@ import netty.channel._
 import netty.buffer._
 
 class HandshakeEncoder extends OneToOneEncoder {
-  
+
   def encode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
     obj match {
       case NameMessage(version, flags, name) =>
@@ -72,5 +72,5 @@ class HandshakeEncoder extends OneToOneEncoder {
         buffer
     }
   }
-  
+
 }

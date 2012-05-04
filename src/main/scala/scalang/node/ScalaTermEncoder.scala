@@ -70,9 +70,9 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
       buffer
     }
   }
-  
+
   def encodeObject(buffer : ChannelBuffer, obj : Any) : Unit = obj match {
-    case i : Int if i >= 0 && i <= 255 => 
+    case i : Int if i >= 0 && i <= 255 =>
       writeSmallInteger(buffer, i)
     case i : Int =>
       writeInteger(buffer, i)
@@ -143,21 +143,21 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
     case p : Product =>
       writeProduct(buffer, p)
   }
-  
+
   def writeBinary(buffer : ChannelBuffer, b : ByteBuffer) {
     val length = b.remaining
     buffer.writeByte(109)
     buffer.writeInt(length)
     buffer.writeBytes(b)
   }
-  
+
   def writeBinary(buffer : ChannelBuffer, a : Array[Byte]) {
     val length = a.length
     buffer.writeByte(109)
     buffer.writeInt(length)
     buffer.writeBytes(a)
   }
-  
+
   def writeBinary(buffer : ChannelBuffer, b : ByteBuffer, i : Int) {
     val length = b.remaining
     buffer.writeByte(77)
@@ -165,7 +165,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
     buffer.writeByte(i)
     buffer.writeBytes(b)
   }
-  
+
   def writeLong(buffer : ChannelBuffer, l : Long) {
     val sign = if (l < 0) 1 else 0
     val bytes = ByteBuffer.allocate(8)
@@ -177,7 +177,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
     bytes.flip
     buffer.writeBytes(bytes)
   }
-  
+
   def writeBigInt(buffer : ChannelBuffer, big : BigInteger) {
     val bytes = big.toByteArray
     val sign = if (big.signum < 0) 1 else 0
@@ -194,7 +194,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
       buffer.writeByte(bytes(length - i))
     }
   }
-  
+
   def writeList(buffer : ChannelBuffer, list : List[Any], tail : Any) {
     buffer.writeByte(108)
     buffer.writeInt(list.size)
@@ -203,7 +203,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
     }
     encodeObject(buffer, tail)
   }
-  
+
   def writeJList(buffer : ChannelBuffer, list : JList[Any], tail : Any) {
     buffer.writeByte(108)
     buffer.writeInt(list.size)
@@ -213,29 +213,29 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
     }
     encodeObject(buffer, tail)
   }
-  
+
   def writeAtom(buffer : ChannelBuffer, s : Symbol) {
     buffer.writeByte(100)
     val bytes = s.name.getBytes
     buffer.writeShort(bytes.length)
     buffer.writeBytes(bytes)
   }
-  
+
   def writeSmallInteger(buffer : ChannelBuffer, i : Int) {
     buffer.writeByte(97)
     buffer.writeByte(i)
   }
-  
+
   def writeInteger(buffer : ChannelBuffer, i : Int) {
     buffer.writeByte(98)
     buffer.writeInt(i)
   }
-  
+
   def writeFloat(buffer : ChannelBuffer, d : Double) {
     buffer.writeByte(70)
     buffer.writeLong(java.lang.Double.doubleToLongBits(d))
   }
-  
+
   def writeStringFloat(buffer : ChannelBuffer, d : Double) {
     val formatter = new Formatter
     formatter.format("%.20e", d.asInstanceOf[AnyRef])
@@ -243,7 +243,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
     buffer.writeByte(99)
     buffer.writeBytes(str)
   }
-  
+
   def writeProduct(buffer : ChannelBuffer, p : Product) {
     val name = p.productPrefix
     if (name.startsWith("Tuple")) {
@@ -252,7 +252,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
       writeTuple(buffer, Some(name.camelToUnderscore), p)
     }
   }
-  
+
   def writeTuple(buffer : ChannelBuffer, tag : Option[String], p : Product) {
     val length = tag.size + p.productArity
     buffer.writeByte(104)
@@ -264,7 +264,7 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
       encodeObject(buffer, element)
     }
   }
-  
+
   def writeBigTuple(buffer : ChannelBuffer, tuple : BigTuple) {
     val length = tuple.productArity
     if (length < 255) {

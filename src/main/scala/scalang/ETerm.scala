@@ -16,5 +16,5 @@
 package scalang
 
 trait ETerm {
-  
+
 }

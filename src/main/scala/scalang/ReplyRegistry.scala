@@ -20,7 +20,7 @@ import org.cliffc.high_scale_lib.NonBlockingHashMap
 
 trait ReplyRegistry {
   val replyWaiters = new NonBlockingHashMap[(Pid,Reference),BlockingQueue[Any]]
-  
+
   /**
    * Returns true if the reply delivery succeeded. False otherwise.
    */

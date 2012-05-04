@@ -37,12 +37,12 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
   @volatile var peer : Symbol = null
   @volatile var challenge : Int = 0
   @volatile var peerChallenge : Int = 0
-  
+
   val messages = new ArrayDeque[MessageEvent]
   val random = SecureRandom.getInstance("SHA1PRNG")
-  
+
   def isVerified = currentState == 'verified
-  
+
   //handler callbacks
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
     this.ctx = ctx
@@ -51,29 +51,29 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
       super.messageReceived(ctx, e)
       return
     }
-    
+
     event(msg)
   }
-  
+
   override def channelConnected(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     this.ctx = ctx
     val channel = ctx.getChannel
     val future = Channels.future(channel)
     event(ConnectedMessage)
   }
-  
+
   override def channelClosed(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     this.ctx = ctx
     log.error("Channel closed during handshake")
     handshakeFailed
   }
-  
+
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
     this.ctx = ctx
     log.error(e.getCause, "Exception caught during erlang handshake: ")
     handshakeFailed
   }
-  
+
   override def writeRequested(ctx : ChannelHandlerContext, e : MessageEvent) {
     this.ctx = ctx
     if (isVerified) {
@@ -82,7 +82,7 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
       messages.offer(e)
     }
   }
-  
+
   //utility methods
   protected def digest(challenge : Int, cookie : String) : Array[Byte] = {
     val masked = mask(challenge)
@@ -91,7 +91,7 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
     md5.update(masked.toString.getBytes)
     md5.digest
   }
-  
+
   def mask(challenge : Int) : Long = {
     if (challenge < 0) {
       (1L << 31) | (challenge & 0x7FFFFFFFL)
@@ -99,7 +99,7 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
       challenge.toLong
     }
   }
-  
+
   protected def digestEquals(a : Array[Byte], b : Array[Byte]) : Boolean = {
     var equals = true
     if (a.length != b.length) {
@@ -111,7 +111,7 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
     }
     equals
   }
-  
+
   protected def drainQueue {
     val p = ctx.getPipeline
     val keys = p.toMap.keySet
@@ -119,17 +119,17 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
       p.remove(name)
     }
     posthandshake(peer,p)
-    
+
     for (msg <- messages) {
       ctx.sendDownstream(msg)
     }
     messages.clear
   }
-  
+
   protected def handshakeSucceeded {
     ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeSucceeded(peer, ctx.getChannel), null))
   }
-  
+
   protected def handshakeFailed {
     ctx.getChannel.close
     ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeFailed(peer), null))

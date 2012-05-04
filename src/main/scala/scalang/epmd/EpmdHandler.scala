@@ -28,21 +28,21 @@ import java.util.concurrent.TimeUnit
 
 class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
   val queue = new ConcurrentLinkedQueue[EpmdResponse]
-  
+
   def response : Callable[Any] = {
     val call = new EpmdResponse
     queue.add(call)
     call
   }
-  
+
   override def channelClosed(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     log.debug("Oh snap channel closed.")
   }
-  
+
   override def channelDisconnected(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     log.debug("Uh oh disconnect.")
   }
-  
+
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
     var rsp = queue.poll
     while (rsp != null) {
@@ -50,7 +50,7 @@ class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
       rsp = queue.poll
     }
   }
-  
+
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
     val response = e.getMessage
     var rsp = queue.poll
@@ -59,23 +59,23 @@ class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
       rsp = queue.poll
     }
   }
-  
+
   class EpmdResponse extends Callable[Any] {
     val response = new AtomicReference[Any]
     val error = new AtomicReference[Throwable]
     val lock = new CountDownLatch(1)
-    
+
     def setError(t : Throwable) {
       error.set(t)
       lock.countDown
-      
+
     }
-    
+
     def set(v : Any) {
       response.set(v)
       lock.countDown
     }
-    
+
     def call : Any = {
       if (lock.await(5000, TimeUnit.MILLISECONDS)) {
         if (error.get != null) {

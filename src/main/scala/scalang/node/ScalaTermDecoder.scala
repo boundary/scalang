@@ -69,7 +69,7 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
     case _ =>
       obj.asInstanceOf[AnyRef]
   }
-  
+
   def readMessage(buffer : ChannelBuffer) : AnyRef = {
     val t = buffer.readByte
     if (t != 112) throw new DistributedProtocolException("Got message of type " + t)
@@ -101,7 +101,7 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         MonitorExitMessage(from, to, ref, reason)
     }
   }
-  
+
   def readTerm(buffer : ChannelBuffer) : Any = {
     buffer.readUnsignedByte match {
       case 131 => //version derp
@@ -238,14 +238,14 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         buffer.readDouble
     }
   }
-  
+
   def readLittleEndianLong(length : Int, sign : Int, buffer : ChannelBuffer) : Long = {
     val bytes = new Array[Byte](8)
     buffer.readBytes(bytes, 0, length)
     val little = ChannelBuffers.wrappedBuffer(ByteOrder.LITTLE_ENDIAN, bytes)
     little.readLong
   }
-  
+
   def readReversed(length : Int, buffer : ChannelBuffer) : Array[Byte] = {
     val bytes = new Array[Byte](length)
     for (n <- (1 to length)) {
@@ -253,7 +253,7 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
     }
     bytes
   }
-  
+
   def readList(length : Int, buffer : ChannelBuffer) : (List[Any], Option[Any]) = {
     var i = 0
     val b = new ArrayBuffer[Any](length)
@@ -271,7 +271,7 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
     }
     (b.toList, None)
   }
-  
+
   def readTuple(arity : Int, buffer : ChannelBuffer) = {
     readTerm(buffer) match {
       case name : Symbol =>
@@ -285,7 +285,7 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         readVanillaTuple(first, arity, buffer)
     }
   }
-   
+
   def readVanillaTuple(first : Any, arity : Int, buffer : ChannelBuffer) : Any = arity match {
     case 1 => (first)
     case 2 => (first, readTerm(buffer))
@@ -311,7 +311,7 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
     case 22 => (first, readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer), readTerm(buffer))
     case _ => readBigTuple(first, arity, buffer)
   }
-  
+
   def readBigTuple(first : Any, arity : Int, buffer : ChannelBuffer) : BigTuple = {
     val elements = (for(n <- (1 until arity)) yield {
       readTerm(buffer)

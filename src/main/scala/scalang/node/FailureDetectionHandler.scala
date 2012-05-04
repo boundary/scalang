@@ -12,17 +12,17 @@ class FailureDetectionHandler(node : Symbol, clock : Clock, tickTime : Int, time
   @volatile var lastTimeReceived = 0l
   @volatile var ctx : ChannelHandlerContext = null
   val exception = new ReadTimeoutException
-  
+
   override def channelOpen(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     this.ctx = ctx
     lastTimeReceived = clock.currentTimeMillis
     scheduleTick
   }
-  
+
   override def channelClosed(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     if (nextTick != null) nextTick.cancel
   }
-  
+
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
     lastTimeReceived = clock.currentTimeMillis
     e.getMessage match {
@@ -33,7 +33,7 @@ class FailureDetectionHandler(node : Symbol, clock : Clock, tickTime : Int, time
         ctx.sendUpstream(e);
     }
   }
-  
+
   object TickTask extends TimerTask {
     override def run(timeout : Timeout) {
       val last = (clock.currentTimeMillis - lastTimeReceived) / 1000
@@ -45,7 +45,7 @@ class FailureDetectionHandler(node : Symbol, clock : Clock, tickTime : Int, time
       scheduleTick
     }
   }
-  
+
   def scheduleTick {
     nextTick = timer.newTimeout(TickTask, tickTime / 4, TimeUnit.SECONDS)
   }

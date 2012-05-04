@@ -47,7 +47,7 @@ class ErlangNodeServer(node : ErlangNode, typeFactory : TypeFactory) {
       pipeline
     }
   })
-      
+
   val channel = bootstrap.bind(new InetSocketAddress(0))
   def port = channel.getLocalAddress.asInstanceOf[InetSocketAddress].getPort
 }

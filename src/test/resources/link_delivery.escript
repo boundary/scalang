@@ -12,8 +12,8 @@ main([]) ->
       end
     end),
   receive
-    {'EXIT', _, _} -> 
+    {'EXIT', _, _} ->
       halt(),
       receive after infinity -> 0 end
   end.
-  
+

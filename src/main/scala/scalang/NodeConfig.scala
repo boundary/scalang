@@ -22,7 +22,7 @@ case class NodeConfig(
   clusterListener : Option[ClusterListener] = None,
   typeFactory : TypeFactory = NoneTypeFactory,
   tickTime : Int = 60)
-  
+
 object NoneTypeFactory extends TypeFactory {
   def createType(name : Symbol, arity : Int, reader : TermReader) = None
 }

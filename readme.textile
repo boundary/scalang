@@ -14,7 +14,7 @@ From Maven:
       <url>http://maven.boundary.com/artifactory/repo</url>
     </repository>
   </repositories>
-  
+
   <dependencies>
     <dependency>
       <groupId>com.boundary</groupId>
@@ -30,7 +30,7 @@ From SBT:
 <pre>
 <code>
   val boundaryPublic = "Boundary Public Repo" at "http://maven.boundary.com/artifactory/repo"
-  
+
   val scalang = "com.boundary" %% "scalang" % "0.9"
 </code>
 </pre>
@@ -62,12 +62,12 @@ Scalang shares Erlang's concept of a process, a lightweight actor that is capabl
       log.info("received %s", msg)
     }
   }
-  
+
   val pid = node.spawn[MyProcess]("my_process")
-  
+
   //send to the pid
   node.send(pid, "hey there")
-  
+
   //send to the regname
   node.send("my_process", "you wanna party?")
 </code>
@@ -92,7 +92,7 @@ The following shows a simple echo server and client that demonstrate message sen
 
 
   val server = node.spawn[EchoServer]("echo_server")
-  
+
   val client = node.spawn { mbox =>
     mbox.send(server, (client,'derp))
     val received = mbox.receive
@@ -126,7 +126,7 @@ Processes that must implement custom behavior may override the trapExit method.
     override def onMessage(msg : Any) = msg match {
       case _ => log.info("derp %s", msg)
     }
-    
+
     override def trapExit(from : Pid, msg : Any) {
       log.warning("got exit notification from %s reason %s", from, msg)
     }
@@ -178,12 +178,12 @@ Scalang messages are serialized into "Erlang's external term format":http://www.
 
 h2. Rich Type Mappings
 
-Sometimes the built-in type mappings in Scalang are not sufficient for an application's message format.  Scalang provides the TypeFactory trait for client code to provide custom decoding behavior.  A TypeFactory is invoked when Scalang comes across a term that looks like an erlang record: a tuple where the first element is an atom.  The createType method is called with the first tuple element as the name and the arity of the tuple.  
+Sometimes the built-in type mappings in Scalang are not sufficient for an application's message format.  Scalang provides the TypeFactory trait for client code to provide custom decoding behavior.  A TypeFactory is invoked when Scalang comes across a term that looks like an erlang record: a tuple where the first element is an atom.  The createType method is called with the first tuple element as the name and the arity of the tuple.
 
 <pre>
 <code>
   object StructFactory extends TypeFactory {
-    def createType(name : Symbol, arity : Int, reader : TermReader) : Option[Seq[Any]] = { 
+    def createType(name : Symbol, arity : Int, reader : TermReader) : Option[Seq[Any]] = {
       try {
         reader.mark
         (name,arity) match {
@@ -192,13 +192,13 @@ Sometimes the built-in type mappings in Scalang are not sufficient for an applic
         }
       }
     }
-    
+
     protected def readSeq(reader : TermReader) : Map[Symbol,Any] = {
       val proplist = reader.readAs[List[Symbol,Any]]
       proplist.toMap
     }
   }
-  
+
   val node = Node("test", cookie, NodeConfig(
     typeFactory = StructFactory))
 </code>
@@ -217,20 +217,20 @@ Most modern Erlang applications are built using the OTP framework, and in partic
   case class EchoServiceArgs(name : String)
   class EchoService(ctx : ServiceContext[EchoServiceArgs]) extends Service(ctx) {
     val EchoServiceArgs(name) = ctx.args
-    
+
     override def handleCall(from : Pid, request : Any) : Any = {
       name + " " + request
     }
-    
+
     override def handleCast(request : Any) {
       log.info("Can't echo a cast. %s", request)
     }
-    
+
     override def handleInfo(request : Any) {
       log.info("A wild message appeared. %s, request")
     }
   }
-  
+
   val node = Node("test", cookie)
   val pid = node.spawnService[EchoService]("echo", EchoServiceArgs("test_echo"))
 </code>

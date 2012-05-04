@@ -3,16 +3,16 @@ package scalang.util
 /**
  * State Machine
  * example usage:
- * 
+ *
  */
 
 trait StateMachine {
-  
+
   def start : Symbol
   val mutex = new Object
   protected var stateList : List[State] = null
   @volatile protected var currentState = start
-  
+
   def event(evnt : Any) {
     mutex.synchronized {
       if (currentState == null) {
@@ -24,13 +24,13 @@ trait StateMachine {
       currentState = nextState
     }
   }
-  
+
   protected def states(states : State*) {
     stateList = states.toList
   }
-  
+
   protected def state(name : Symbol, transitions : PartialFunction[Any,Symbol]) = State(name, transitions)
-  
+
   case class State(name : Symbol, transitions : PartialFunction[Any,Symbol]) {
     def event(evnt : Any) : Symbol = {
       if (!transitions.isDefinedAt(evnt)) {
@@ -40,8 +40,8 @@ trait StateMachine {
       }
     }
   }
-  
+
   class UnexpectedEventException(msg : String) extends Exception(msg)
-  
+
   class UndefinedStateException(msg : String) extends Exception(msg)
 }

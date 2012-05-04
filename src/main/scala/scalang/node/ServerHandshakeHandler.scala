@@ -32,19 +32,19 @@ import java.security.{SecureRandom,MessageDigest}
 
 class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Symbol,ChannelPipeline) => Unit) extends HandshakeHandler(posthandshake) {
   states(
-    state('disconnected, { 
+    state('disconnected, {
       case ConnectedMessage => 'connected
     }),
-    
-    state('connected, { 
+
+    state('connected, {
       case msg : NameMessage =>
         receiveName(msg)
         sendStatus
         sendChallenge
         'challenge_sent
     }),
-    
-    state('challenge_sent, { 
+
+    state('challenge_sent, {
       case msg : ChallengeReplyMessage =>
         verifyChallenge(msg)
         sendChallengeAck(msg)
@@ -52,20 +52,20 @@ class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
         handshakeSucceeded
         'verified
     }),
-    
+
     state('verified, { case _ => 'verified}))
 
   //state machine callbacks
   protected def receiveName(msg : NameMessage) {
     peer = Symbol(msg.name)
   }
-  
+
   protected def sendStatus {
     val channel = ctx.getChannel
     val future = Channels.future(channel)
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,StatusMessage("ok"),null))
   }
-  
+
   protected def sendChallenge {
     val channel = ctx.getChannel
     val future = Channels.future(channel)
@@ -73,14 +73,14 @@ class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
     val msg = ChallengeMessage(5, DistributionFlags.default, challenge, name.name)
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
-  
+
   protected def verifyChallenge(msg : ChallengeReplyMessage) {
     val ourDigest = digest(challenge, cookie)
     if (!digestEquals(ourDigest, msg.digest)) {
       throw new ErlangAuthException("Peer authentication error.")
     }
   }
-  
+
   protected def sendChallengeAck(msg : ChallengeReplyMessage) {
     val channel = ctx.getChannel
     val future = Channels.future(channel)

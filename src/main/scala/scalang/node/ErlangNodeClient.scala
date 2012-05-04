@@ -31,8 +31,8 @@ class ErlangNodeClient(
     peer : Symbol,
     host : String,
     port : Int,
-    control : Option[Any], 
-    typeFactory : TypeFactory, 
+    control : Option[Any],
+    typeFactory : TypeFactory,
     afterHandshake : Channel => Unit) {
   val bootstrap = new ClientBootstrap(
     new NioClientSocketChannelFactory(
@@ -41,10 +41,10 @@ class ErlangNodeClient(
   bootstrap.setPipelineFactory(new ChannelPipelineFactory {
     def getPipeline : ChannelPipeline = {
       val pipeline = Channels.pipeline
-      
+
       val handshakeDecoder = new HandshakeDecoder
       handshakeDecoder.mode = 'challenge //first message on the client side is challenge, not name
-      
+
       pipeline.addLast("handshakeFramer", new LengthFieldBasedFrameDecoder(Short.MaxValue, 0, 2, 0, 2))
       pipeline.addLast("handshakeDecoder", handshakeDecoder)
       pipeline.addLast("handshakeEncoder", new HandshakeEncoder)
@@ -54,11 +54,11 @@ class ErlangNodeClient(
       pipeline.addLast("erlangDecoder", new ScalaTermDecoder(peer, typeFactory))
       pipeline.addLast("erlangEncoder", new ScalaTermEncoder(peer))
       pipeline.addLast("erlangHandler", new ErlangHandler(node, afterHandshake))
-      
+
       pipeline
     }
   })
-  
+
   val future = bootstrap.connect(new InetSocketAddress(host, port))
   val channel = future.getChannel
   future.addListener(new ChannelFutureListener {

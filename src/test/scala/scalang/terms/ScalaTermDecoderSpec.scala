@@ -13,7 +13,7 @@ class ScalaTermDecoderSpec extends SpecificationWithJUnit {
   "ScalaTermDecoder" should {
     "decode regular terms" in {
       val decoder = new ScalaTermDecoder('test, NoneTypeFactory)
-      
+
       "read small integers" in {
         val thing = decoder.readTerm(copiedBuffer(ByteArray(97,2)))
         thing must ==(2)
@@ -98,7 +98,7 @@ class ScalaTermDecoderSpec extends SpecificationWithJUnit {
         val thing = decoder.readTerm(copiedBuffer(ByteArray(77,0,0,0,1,7,120)))
         thing must ==(BitString(ByteBuffer.wrap(ByteArray(120)), 7))
       }
-      
+
       "read case objects" in {
         val dec = new ScalaTermDecoder('test, new CaseClassFactory(Seq("scalang.node"), Map[String,Class[_]]()))
         //{foo, "balls", 1245, 60.0}
@@ -111,7 +111,7 @@ class ScalaTermDecoderSpec extends SpecificationWithJUnit {
         realFoo.integer must ==(1245)
         realFoo.float must ==(60.0)
       }
-      
+
       "read typeMapped objects" in {
         val dec = new ScalaTermDecoder('test, new CaseClassFactory(Nil, Map("herp" -> classOf[Derp])))
         //{herp, 6234234234234234234, 1260.0, "gack"}
@@ -125,7 +125,7 @@ class ScalaTermDecoderSpec extends SpecificationWithJUnit {
         realDerp.gack must ==("gack")
       }
     }
-    
+
     "decode full distribution packets" in {
       new DecoderEmbedder[Any](new ScalaTermDecoder('test, new CaseClassFactory(Nil, Map[String,Class[_]]())))
     }

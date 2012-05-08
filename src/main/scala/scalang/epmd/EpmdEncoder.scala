@@ -26,12 +26,12 @@ import netty.handler.codec.oneone._
 object EpmdConst {
   val ntypeR6 = 110
   val ntypeR4Erlang = 109
-  val ntypeR4Hidden = 104  
+  val ntypeR4Hidden = 104
 }
 
 class EpmdEncoder extends OneToOneEncoder {
   import EpmdConst._
-  
+
   override def encode(ctx : ChannelHandlerContext, channel : Channel, msg : Object) : Object = {
     val bout = new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(24, ctx.getChannel.getConfig.getBufferFactory))
     bout.writeShort(0) //length placeholder

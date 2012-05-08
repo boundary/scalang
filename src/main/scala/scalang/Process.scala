@@ -33,34 +33,34 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
   val node = ctx.node
   val messageRate = metrics.meter("messages", "messages", instrumentedName)
   val executionTimer = metrics.timer("execution", instrumentedName)
-  
+
   def instrumentedName = self.toErlangString
-  
+
   implicit def pid2sendable(pid : Pid) = new PidSend(pid,this)
   implicit def sym2sendable(to : Symbol) = new SymSend(to,this)
   implicit def dest2sendable(dest : (Symbol,Symbol)) = new DestSend(dest,self,this)
-  
+
   def sendEvery(pid : Pid, msg : Any, delay : Long) {
     val runnable = new Runnable {
       def run = send(pid,msg)
     }
     fiber.scheduleAtFixedRate(runnable, delay, delay, TimeUnit.MILLISECONDS)
   }
-  
+
   def sendEvery(name : Symbol, msg : Any, delay : Long) {
     val runnable = new Runnable {
       def run = send(name,msg)
     }
     fiber.scheduleAtFixedRate(runnable, delay, delay, TimeUnit.MILLISECONDS)
   }
-  
+
   def sendEvery(name : (Symbol,Symbol), msg : Any, delay : Long) {
     val runnable = new Runnable {
       def run = send(name,self,msg)
     }
     fiber.scheduleAtFixedRate(runnable, delay, delay, TimeUnit.MILLISECONDS)
   }
-  
+
   def sendAfter(pid : Pid, msg : Any, delay : Long) {
     val runnable = new Runnable {
       def run {
@@ -69,7 +69,7 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
     }
     fiber.schedule(runnable, delay, TimeUnit.MILLISECONDS)
   }
-  
+
   def sendAfter(name : Symbol, msg : Any, delay : Long) {
     val runnable = new Runnable {
       def run {
@@ -78,7 +78,7 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
     }
     fiber.schedule(runnable, delay, TimeUnit.MILLISECONDS)
   }
-  
+
   def sendAfter(dest : (Symbol,Symbol), msg : Any, delay : Long) {
     val runnable = new Runnable {
       def run {
@@ -87,28 +87,38 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
     }
     fiber.schedule(runnable, delay, TimeUnit.MILLISECONDS)
   }
-  
+
   /**
    * Subclasses should override this method with their own message handlers
    */
   def onMessage(msg : Any)
-  
+
   /**
    * Subclasses wishing to trap exits should override this method.
    */
   def trapExit(from : Pid, msg : Any) {
     exit(msg)
   }
-  
+
+  /**
+   * Subclasses wishing to trap monitor exits should override this method.
+   */
+  def trapMonitorExit(pid : Pid, ref : Reference, reason : Any) {
+  }
+
   override def handleMessage(msg : Any) {
     messageRate.mark
     msgChannel.publish(msg)
   }
-  
+
   override def handleExit(from : Pid, msg : Any) {
     exitChannel.publish((from,msg))
   }
-  
+
+  override def handleMonitorExit(pid : Pid, ref : Reference, reason : Any) {
+    monitorChannel.publish((pid,ref,reason))
+  }
+
   val p = this
   val msgChannel = new MemoryChannel[Any]
   msgChannel.subscribe(ctx.fiber, new Callback[Any] {
@@ -124,7 +134,7 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
       }
     }
   })
-  
+
   val exitChannel = new MemoryChannel[(Pid,Any)]
   exitChannel.subscribe(ctx.fiber, new Callback[(Pid,Any)] {
     def onMessage(msg : (Pid,Any)) {
@@ -137,6 +147,20 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
       }
     }
   })
+
+  val monitorChannel = new MemoryChannel[(Pid,Reference,Any)]
+  monitorChannel.subscribe(ctx.fiber, new Callback[(Pid,Reference,Any)] {
+    def onMessage(msg : (Pid,Reference,Any)) {
+      try {
+        trapMonitorExit(msg._1, msg._2, msg._3)
+      } catch {
+        case e : Throwable =>
+          log.error(e, "An error occurred during handleMonitorExit in actor %s", this)
+          exit(e.getMessage)
+      }
+    }
+  })
+
 }
 
 class PidSend(to : Pid, proc : Process) {

@@ -22,25 +22,25 @@ class FunProcess(fun : Mailbox => Unit, ctx : ProcessContext) extends Process(ct
   val queue = new LinkedBlockingQueue[Any]
   val parentPid = self
   val parentRef = referenceCounter
-  
+
   val mbox = new Mailbox {
     def self = parentPid
     def referenceCounter = parentRef
-    
+
     override def handleMessage(msg : Any) {
       queue.offer(msg)
     }
-    
+
     def receive : Any = {
       queue.take
     }
-    
+
     def receive(timeout : Long) : Option[Any] = {
       Option(queue.poll(timeout, TimeUnit.MILLISECONDS))
     }
   }
-  
-  
+
+
   def start {
     fiber.execute(new Runnable {
       override def run {
@@ -49,9 +49,9 @@ class FunProcess(fun : Mailbox => Unit, ctx : ProcessContext) extends Process(ct
       }
     })
   }
-  
+
   override def onMessage(msg : Any) {
     queue.offer(msg)
   }
-  
+
 }

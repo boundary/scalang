@@ -16,7 +16,7 @@ class EpmdEncoderSpec extends SpecificationWithJUnit {
       buffer.readBytes(bytes)
       bytes.deep must ==(ByteArray(0,17,120,21,54,110,0,0,5,0,5,0,4,102,117,99,107,0,0).deep)
     }
-    
+
     "encode a port please request" in {
       val embedder = new EncoderEmbedder[ChannelBuffer](new EpmdEncoder)
       embedder.offer(PortPleaseReq("fuck"))

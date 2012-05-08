@@ -1,5 +1,5 @@
 //
-// Copyright 2011, Boundary
+// Copyright 2012, Boundary
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,33 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package scalang
+package scalang.node
 
-import node._
-import org.jboss.netty.buffer.ChannelBuffer
+import scalang._
 
-trait TypeFactory {
-  def createType(name : Symbol, arity : Int, reader : TermReader) : Option[Any]
-}
+trait MonitorListenable {
+  @volatile var monitorListeners : List[MonitorListener] = Nil
 
-class TermReader(val buffer : ChannelBuffer, decoder : ScalaTermDecoder) {
-  var m : Int = 0
-
-  def mark : TermReader = {
-    m = buffer.readerIndex
-    this
+  def addMonitorListener(listener : MonitorListener) {
+    monitorListeners = listener :: monitorListeners
   }
 
-  def reset : TermReader = {
-    buffer.readerIndex(m)
-    this
+  def notifyMonitorExit(monitor : Monitor, reason : Any) {
+    for (listener <- monitorListeners) {
+      listener.monitorExit(monitor, reason)
+    }
   }
 
-  def readTerm : Any = {
-    decoder.readTerm(buffer)
+  def notifyDeliverMonitor(monitor : Monitor) {
+    for (listener <- monitorListeners) {
+      listener.deliverMonitor(monitor)
+    }
   }
 
-  def readAs[A] : A = {
-    readTerm.asInstanceOf[A]
-  }
 }

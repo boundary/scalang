@@ -21,12 +21,12 @@ import netty.channel._
 import netty.buffer._
 
 class HandshakeDecoder extends OneToOneDecoder {
-  
+
   //we need to have a dirty fucking mode context
   //because name messages and challenge replies have
   //the same identifier
   @volatile var mode = 'name
-  
+
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = {
     //dispatch on first byte
     val buffer = obj.asInstanceOf[ChannelBuffer]
@@ -72,5 +72,5 @@ class HandshakeDecoder extends OneToOneDecoder {
         buffer
     }
   }
-  
+
 }

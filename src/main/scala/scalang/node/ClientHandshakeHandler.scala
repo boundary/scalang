@@ -37,7 +37,7 @@ class ClientHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
         sendName
         'connected
     }),
-    
+
     state('connected, {
       case StatusMessage("ok") =>
         'status_ok
@@ -49,14 +49,14 @@ class ClientHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
       case StatusMessage(status) =>
         throw new ErlangAuthException("Bad status message: " + status)
     }),
-    
+
     state('status_ok, {
       case ChallengeMessage(version, flags, c, name) =>
         peer = Symbol(name)
         sendChallengeReply(c)
         'reply_sent
     }),
-    
+
     state('reply_sent, {
       case ChallengeAckMessage(digest) =>
         verifyChallengeAck(digest)
@@ -64,25 +64,25 @@ class ClientHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
         handshakeSucceeded
         'verified
     }),
-    
+
     state('verified, {
       case _ => 'verified
     }))
-    
+
   protected def sendStatus(st : String) {
     val channel = ctx.getChannel
     val future = Channels.future(channel)
     val msg = StatusMessage(st)
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
-    
+
   protected def sendName {
     val channel = ctx.getChannel
     val future = Channels.future(channel)
     val msg = NameMessage(5, DistributionFlags.default, name.name)
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
-    
+
   protected def sendChallengeReply(c : Int) {
     val channel = ctx.getChannel
     val future = Channels.future(channel)
@@ -92,7 +92,7 @@ class ClientHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
     val msg = ChallengeReplyMessage(challenge, d)
     ctx.sendDownstream(new DownstreamMessageEvent(channel,future,msg,null))
   }
-  
+
   protected def verifyChallengeAck(peerDigest : Array[Byte]) {
     val ourDigest = digest(challenge, cookie)
     if (!digestEquals(ourDigest, peerDigest)) {

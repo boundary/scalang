@@ -11,11 +11,11 @@ import netty.handler.codec.embedder.TwoWayCodecEmbedder
 class ClientHandshakeHandlerSpec extends SpecificationWithJUnit {
   val cookie = "DRSJLFJLGIYPEAVFYFCY"
   val node = Symbol("tmp@moonpolysoft.local")
-  
+
   "ClientHandshakeHandler" should {
     "complete a standard handshake" in {
       val handshake = new ClientHandshakeHandler(node, cookie, { (peer : Symbol, p : ChannelPipeline) =>
-        
+
       })
       val embedder = new TwoWayCodecEmbedder[Any](handshake)
       val nameMsg = embedder.poll

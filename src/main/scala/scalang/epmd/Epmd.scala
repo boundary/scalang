@@ -26,12 +26,12 @@ import overlock.threadpool._
 
 object Epmd {
   val defaultPort = 4369
-  
+
   def apply(host : String) : Epmd = {
     val port = Option(System.getenv("ERL_EPMD_PORT")).map(_.toInt).getOrElse(defaultPort)
     new Epmd(host, port)
   }
-  
+
   def apply(host : String, port : Int) : Epmd = {
     new Epmd(host, port)
   }
@@ -42,9 +42,9 @@ class Epmd(val host : String, val port : Int) {
     new NioClientSocketChannelFactory(
       ThreadPool.instrumentedElastic("scalang.epmd", "boss", 1, 20),
       ThreadPool.instrumentedElastic("scalang.epmd", "worker", 1, 20)))
-      
+
   val handler = new EpmdHandler
-      
+
   bootstrap.setPipelineFactory(new ChannelPipelineFactory {
     def getPipeline : ChannelPipeline = {
       Channels.pipeline(
@@ -53,19 +53,19 @@ class Epmd(val host : String, val port : Int) {
         handler)
     }
   })
-  
+
   val connectFuture = bootstrap.connect(new InetSocketAddress(host, port))
   val channel = connectFuture.awaitUninterruptibly.getChannel
   if(!connectFuture.isSuccess) {
     bootstrap.releaseExternalResources
     throw connectFuture.getCause
   }
-  
+
   def close {
     channel.close
     bootstrap.releaseExternalResources
   }
-  
+
   def alive(portNo : Int, nodeName : String) : Option[Int] = {
     channel.write(AliveReq(portNo,nodeName))
     val response = handler.response.call.asInstanceOf[AliveResp]
@@ -76,7 +76,7 @@ class Epmd(val host : String, val port : Int) {
       None
     }
   }
-  
+
   def lookupPort(nodeName : String) : Option[Int] = {
     channel.write(PortPleaseReq(nodeName))
     handler.response.call match {

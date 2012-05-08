@@ -1,6 +1,6 @@
 package scalang
 
-trait ServiceContext[A <: Product] extends ProcessContext {  
+trait ServiceContext[A <: Product] extends ProcessContext {
   def args : A
 }
 

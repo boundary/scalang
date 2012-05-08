@@ -5,15 +5,15 @@ import java.util._
 import java.util.concurrent._
 import overlock.threadpool._
 
-class BatchPoolExecutor(path : String, 
-  name : String, 
-  coreSize : Int, 
-  maxSize : Int, 
+class BatchPoolExecutor(path : String,
+  name : String,
+  coreSize : Int,
+  maxSize : Int,
   keepAlive : Long,
   unit : TimeUnit,
   queue : BlockingQueue[Runnable],
-  factory : ThreadFactory) extends 
-    InstrumentedThreadPoolExecutor(path, name, coreSize, maxSize, keepAlive, unit, queue, factory) with 
+  factory : ThreadFactory) extends
+    InstrumentedThreadPoolExecutor(path, name, coreSize, maxSize, keepAlive, unit, queue, factory) with
     BatchExecutor {
 
   override def execute(reader : EventReader) {

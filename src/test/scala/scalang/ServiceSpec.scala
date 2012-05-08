@@ -11,20 +11,20 @@ class ServiceSpec extends SpecificationWithJUnit {
     doBefore {
       epmd = EpmdCmd()
     }
-    
+
     doAfter {
       epmd.destroy
       epmd.waitFor
       node.shutdown
     }
-    
+
     "deliver casts" in {
       node = Node(Symbol("test@localhost"), cookie)
       val service = node.spawnService[CastNoopService,NoArgs](NoArgs)
       node.send(service, (Symbol("$gen_cast"),'blah))
       node.isAlive(service) must ==(true)
     }
-    
+
     "deliver calls" in {
       node = Node(Symbol("test@localhost"), cookie)
       val service = node.spawnService[CallEchoService,NoArgs](NoArgs)
@@ -33,7 +33,7 @@ class ServiceSpec extends SpecificationWithJUnit {
       node.send(service, (Symbol("$gen_call"), (mbox.self, ref), 'blah))
       mbox.receive must ==((ref,'blah))
     }
-    
+
     "respond to pings" in {
       node = Node(Symbol("test@localhost"), cookie)
       val service = node.spawnService[CastNoopService,NoArgs](NoArgs)
@@ -42,7 +42,7 @@ class ServiceSpec extends SpecificationWithJUnit {
       node.send(service, ('ping, mbox.self, ref))
       mbox.receive must ==(('pong, ref))
     }
-    
+
     "call and response" in {
       node = Node(Symbol("test@localhost"), cookie)
       val service = node.spawnService[CallAndReceiveService,NoArgs](NoArgs)
@@ -57,15 +57,15 @@ class ServiceSpec extends SpecificationWithJUnit {
 }
 
 class CallAndReceiveService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
-  
+
   override def handleCast(msg : Any) {
     throw new Exception
   }
-  
+
   override def handleCall(tag : (Pid, Reference), msg : Any) : Any = {
     throw new Exception
   }
-  
+
   override def handleInfo(msg : Any) {
     val pid = msg.asInstanceOf[Pid]
     val response = call(pid, "blah")
@@ -77,26 +77,26 @@ class CastNoopService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
   override def handleCast(msg : Any) {
     println("cast received " + msg)
   }
-  
+
   override def handleCall(tag : (Pid, Reference), msg : Any) : Any = {
     throw new Exception
   }
-  
+
   override def handleInfo(msg : Any) {
     throw new Exception
   }
 }
 
 class CallEchoService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
-  
+
   override def handleCast(msg : Any) {
     throw new Exception
   }
-  
+
   override def handleCall(tag : (Pid, Reference), msg : Any) : Any = {
     msg
   }
-  
+
   override def handleInfo(msg : Any) {
     throw new Exception
   }

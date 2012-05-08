@@ -12,11 +12,11 @@ import netty.handler.codec.embedder.TwoWayCodecEmbedder
 
 class ServerHandshakeHandlerSpec extends SpecificationWithJUnit {
   val cookie = "DRSJLFJLGIYPEAVFYFCY"
-  
+
   "ServerHandshakeHandler" should {
     "complete a standard handshake" in {
       val handshake = new ServerHandshakeHandler(Symbol("tmp@blah"), cookie, { (peer : Symbol, p : ChannelPipeline) =>
-        
+
       })
       val embedder = new TwoWayCodecEmbedder[Any](handshake)
       embedder.upstreamMessage(NameMessage(5, 32765, "tmp@moonpolysoft.local"))
@@ -24,7 +24,7 @@ class ServerHandshakeHandlerSpec extends SpecificationWithJUnit {
       status must ==(StatusMessage("ok"))
       var challenge = 0
       val challengeMsg = embedder.poll
-      challengeMsg must beLike { case ChallengeMessage(5, _, c : Int, _) => 
+      challengeMsg must beLike { case ChallengeMessage(5, _, c : Int, _) =>
         challenge = c
         true }
       val md5 = MessageDigest.getInstance("MD5")

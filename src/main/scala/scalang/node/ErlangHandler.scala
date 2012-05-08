@@ -25,18 +25,18 @@ import scalang._
 import com.codahale.logula.Logging
 
 class ErlangHandler(
-    node : ErlangNode, 
+    node : ErlangNode,
     afterHandshake : Channel => Unit = { _ => Unit }) extends SimpleChannelUpstreamHandler with Logging {
-  
+
   @volatile var peer : Symbol = null
-  
+
   override def exceptionCaught(ctx : ChannelHandlerContext, e : ExceptionEvent) {
     log.error(e.getCause, "error caught in erlang handler %s", peer)
     ctx.getChannel.close
   }
-  
+
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
-    val msg = e.getMessage 
+    val msg = e.getMessage
     log.debug("handler message %s", msg)
     msg match {
       case Tick =>
@@ -61,14 +61,20 @@ class ErlangHandler(
         node.unlink(from, to)
       case RegSend(from, to, msg) =>
         node.handleSend(to, msg)
+      case MonitorMessage(from, to, ref) =>
+        node.monitorWithoutNotify(from, to, ref, e.getChannel)
+      case DemonitorMessage(from, to, ref) =>
+        node.demonitor(from, to, ref)
+      case MonitorExitMessage(from, to, ref, reason) =>
+        node.remoteMonitorExit(Monitor(from, to, ref), reason)
     }
   }
-  
+
   override def channelDisconnected(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
     log.debug("channel disconnected %s %s. peer: %s", ctx, e, peer)
     if (peer != null) {
       node.disconnected(peer, e.getChannel)
     }
   }
-  
+
 }

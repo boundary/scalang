@@ -40,6 +40,7 @@ import org.apache.log4j.Level
 import org.jboss.netty.logging._
 import netty.util.HashedWheelTimer
 import com.yammer.metrics.scala._
+import java.nio.channels.ClosedChannelException
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
@@ -695,7 +696,15 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     val channel = channels.getOrElseUpdate(peer, {
       connectAndSend(peer, None) 
     })
-    channel.write(msg)
+
+    if (channel.isOpen) {
+      channel.write(msg)
+    } else {
+        channels.remove(peer, channel)
+        channel.close()
+        channels.getOrElseUpdate(peer, { connectAndSend(peer, None) }).write(msg)
+    }
+
     afterHandshake(channel)
 /*    
     Option(channels.get(peer)) match {

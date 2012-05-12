@@ -6,3 +6,4 @@ lib_managed/*
 *.iml
 *.iws
 *.ipr
+.idea/*

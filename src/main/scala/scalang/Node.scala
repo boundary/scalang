@@ -631,6 +631,12 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         Unit
     }
     processes.remove(from)
+    registeredNames find { e => e._2 == from } match {
+      case Some(entry) =>
+        registeredNames.remove(entry._1)
+      case None =>
+        return
+    }
   }
   
   //this only gets called from a remote link breakage()

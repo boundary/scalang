@@ -101,6 +101,18 @@ class NodeSpec extends SpecificationWithJUnit {
       Thread.sleep(100)
       Option(node.processes.get(pid)) must beNone
     }
+
+    "unregister processes on exit" in {
+      node = Node(Symbol("scala@localhost"), cookie)
+      val pid = node.spawn[FailProcess]
+      node.register('foo, pid)
+      node.processes.get(pid) must beLike { case f : Process => true }
+      node.whereis('foo) must ==(Option(pid))
+      node.handleSend(pid, 'bah)
+      Thread.sleep(100)
+      Option(node.processes.get(pid)) must beNone
+      node.whereis('foo) must beNone
+    }
     
     "deliver local breakages" in {
       node = Node(Symbol("scala@localhost"), cookie)

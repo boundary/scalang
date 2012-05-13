@@ -103,7 +103,7 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
   /**
    * Subclasses wishing to trap monitor exits should override this method.
    */
-  def trapMonitorExit(pid : Pid, ref : Reference, reason : Any) {
+  def trapMonitorExit(monitored : Pid, ref : Reference, reason : Any) {
   }
 
   override def handleMessage(msg : Any) {
@@ -115,8 +115,8 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
     exitChannel.publish((from,msg))
   }
 
-  override def handleMonitorExit(pid : Pid, ref : Reference, reason : Any) {
-    monitorChannel.publish((pid,ref,reason))
+  override def handleMonitorExit(monitored : Pid, ref : Reference, reason : Any) {
+    monitorChannel.publish((monitored,ref,reason))
   }
 
   val p = this

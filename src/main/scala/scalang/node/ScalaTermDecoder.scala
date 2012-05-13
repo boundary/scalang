@@ -93,12 +93,12 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
         RegSend(from, to, msg)
       case (8, from : Pid, to : Pid, reason : Any) =>
         Exit2Message(from, to, reason)
-      case (19, from : Pid, to : Pid, ref : Reference) =>
-        MonitorMessage(from, to, ref)
-      case (20, from : Pid, to : Pid, ref : Reference) =>
-        DemonitorMessage(from, to, ref)
-      case (21, from : Pid, to : Pid, ref : Reference, reason : Any) =>
-        MonitorExitMessage(from, to, ref, reason)
+      case (19, monitoring : Pid, monitored: Pid, ref : Reference) =>
+        MonitorMessage(monitoring, monitored, ref)
+      case (20, monitoring : Pid, monitored : Pid, ref : Reference) =>
+        DemonitorMessage(monitoring, monitored, ref)
+      case (21, monitored : Pid, monitoring : Pid, ref : Reference, reason : Any) =>
+        MonitorExitMessage(monitored, monitoring, ref, reason)
     }
   }
 

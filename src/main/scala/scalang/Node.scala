@@ -532,79 +532,79 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
 
   def deliverMonitor(monitor : Monitor) {
-    val from = monitor.from
-    val to = monitor.to
+    val monitoring = monitor.monitoring
+    val monitored = monitor.monitored
     var ref = monitor.ref
-    log.debug("deliverMonitor %s -> %s (%s)", from, to, ref)
-    if (from == to) {
-      log.warn("A process tried to monitor itself: %s", from)
+    log.debug("deliverMonitor %s -> %s (%s)", monitoring, monitored, ref)
+    if (monitoring == monitored) {
+      log.warn("A process tried to monitor itself: %s", monitoring)
       return
     }
 
-    if (isLocal(to)) {
-      for (p <- process(to)) {
-        p.registerMonitor(from, ref)
+    if (isLocal(monitored)) {
+      for (p <- process(monitored)) {
+        p.registerMonitor(monitoring, ref)
       }
     } else {
-      getOrConnectAndSend(to.node, MonitorMessage(from, to, ref), { channel =>
+      getOrConnectAndSend(monitored.node, MonitorMessage(monitoring, monitored, ref), { channel =>
         val set = monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor])
         set.add(monitor)
       })
     }
   }
 
-  def monitorWithoutNotify(from : Pid, to : Pid, ref : Reference, channel : Channel) {
-    log.debug("monitor %s -> %s (%s)", from, to, ref)
-    if (from == to) {
-      log.warn("Trying to monitor itself: %s", from)
+  def monitorWithoutNotify(monitoring : Pid, monitored : Pid, ref : Reference, channel : Channel) {
+    log.debug("monitor %s -> %s (%s)", monitoring, monitored, ref)
+    if (monitoring == monitored) {
+      log.warn("Trying to monitor itself: %s", monitoring)
       return
     }
 
-    if (!isLocal(from) && !isLocal(to)) {
-      log.warn("Try to monitor between non-local pids: %s -> %s", from, to)
+    if (!isLocal(monitoring) && !isLocal(monitored)) {
+      log.warn("Try to monitor between non-local pids: %s -> %s", monitoring, monitored)
       return
     }
 
-    process(to) match {
+    process(monitored) match {
       case Some(p) =>
-        val monitor = p.registerMonitor(from, ref)
-        if (!isLocal(to))
+        val monitor = p.registerMonitor(monitoring, ref)
+        if (!isLocal(monitored))
           monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor]).add(monitor)
       case None =>
-        if (!isLocal(to))
-          monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor]).add(Monitor(from, to, ref))
+        if (!isLocal(monitored))
+          monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor]).add(Monitor(monitoring, monitored, ref))
     }
   }
 
 
   //node internal interface
-  def demonitor(from : Pid, to : Pid, ref : Reference) {
-    log.debug("demonitor %s -> %s (%s)", from, to, ref)
-    for (p <- process(to)) {
+  def demonitor(monitoring : Pid, monitored : Pid, ref : Reference) {
+    log.debug("demonitor %s -> %s (%s)", monitoring, monitored, ref)
+    for (p <- process(monitored)) {
       p.demonitor(ref)
     }
   }
 
   def monitorExit(monitor : Monitor, reason : Any) {
-    val from = monitor.from
-    val to = monitor.to
+    val monitoring = monitor.monitoring
+    val monitored = monitor.monitored
     val ref = monitor.ref
-    if (isLocal(from)) {
-      for (proc <- process(from)) {
-        proc.handleMonitorExit(to, ref, reason)
+    if (isLocal(monitoring)) {
+      for (proc <- process(monitoring)) {
+        proc.handleMonitorExit(monitored, ref, reason)
       }
     } else {
-      getOrConnectAndSend(from.node, MonitorExitMessage(from, to, ref, reason))
+      getOrConnectAndSend(monitoring.node, MonitorExitMessage(monitored, monitoring, ref, reason))
     }
   }
 
   def remoteMonitorExit(monitor : Monitor, reason : Any) {
-    val from = monitor.from
-    val to = monitor.to
+    val monitoring = monitor.monitoring
+    val monitored = monitor.monitored
     val ref = monitor.ref
-    for (proc <- process(from)) {
+    for (proc <- process(monitoring)) {
       proc.monitors.remove(monitor)
-      proc.handleMonitorExit(to, ref, reason)
+      proc.handleMonitorExit(monitored, ref, reason)
     }
   }
 

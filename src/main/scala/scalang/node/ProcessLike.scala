@@ -99,11 +99,11 @@ trait ProcessLike extends ExitListenable with SendListenable with LinkListenable
     links.remove(Link(self, to))
   }
 
-  def handleMonitorExit(monitored : Pid, ref : Reference, reason : Any) {
+  def handleMonitorExit(monitored : Any, ref : Reference, reason : Any) {
     // Empty
   }
 
-  def monitor(monitored : Pid): Reference = {
+  def monitor(monitored : Any): Reference = {
     val m = Monitor(self, monitored, makeRef)
     for (listener <- monitorListeners) {
       listener.deliverMonitor(m)

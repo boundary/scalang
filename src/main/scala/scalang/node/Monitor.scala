@@ -17,7 +17,7 @@ package scalang.node
 
 import scalang._
 
-case class Monitor(monitoring : Pid, monitored : Pid, ref : Reference) extends MonitorListenable {
+case class Monitor(monitoring : Pid, monitored : Any, ref : Reference) extends MonitorListenable {
   def monitorExit(reason : Any) {
     notifyMonitorExit(this, reason)
   }

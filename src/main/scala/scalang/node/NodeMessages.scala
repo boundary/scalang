@@ -35,10 +35,10 @@ case object Tock
 
 //must implement trace tags later
 
-case class MonitorMessage(monitoring : Pid, monitored : Pid, ref : Reference)
+case class MonitorMessage(monitoring : Pid, monitored : Any, ref : Reference)
 
-case class DemonitorMessage(monitoring : Pid, monitored : Pid, ref : Reference)
+case class DemonitorMessage(monitoring : Pid, monitored : Any, ref : Reference)
 
-case class MonitorExitMessage(monitored : Pid, monitoring : Pid, ref : Reference, reason : Any)
+case class MonitorExitMessage(monitored : Any, monitoring : Pid, ref : Reference, reason : Any)
 
 class DistributedProtocolException(msg : String) extends Exception(msg)

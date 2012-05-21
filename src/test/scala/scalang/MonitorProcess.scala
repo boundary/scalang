@@ -14,7 +14,7 @@ class MonitorProcess(ctx : ProcessContext) extends Process(ctx) {
       'ok
   }
 
-  override def trapMonitorExit(pid : Pid, ref : Reference, reason : Any) {
+  override def trapMonitorExit(pid : Any, ref : Reference, reason : Any) {
     if (expectedPid == pid && expectedRef == ref) {
       sendTo ! 'monitor_exit
     }

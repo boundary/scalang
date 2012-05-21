@@ -546,14 +546,14 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         p.registerMonitor(monitoring, ref)
       }
     } else {
-      getOrConnectAndSend(monitored.node, MonitorMessage(monitoring, monitored, ref), { channel =>
+      getOrConnectAndSend(nodeOf(monitored), MonitorMessage(monitoring, monitored, ref), { channel =>
         val set = monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor])
         set.add(monitor)
       })
     }
   }
 
-  def monitorWithoutNotify(monitoring : Pid, monitored : Pid, ref : Reference, channel : Channel) {
+  def monitorWithoutNotify(monitoring : Pid, monitored : Any, ref : Reference, channel : Channel) {
     log.debug("monitor %s -> %s (%s)", monitoring, monitored, ref)
     if (monitoring == monitored) {
       log.warn("Trying to monitor itself: %s", monitoring)
@@ -578,7 +578,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
 
   //node internal interface
-  def demonitor(monitoring : Pid, monitored : Pid, ref : Reference) {
+  def demonitor(monitoring : Pid, monitored : Any, ref : Reference) {
     log.debug("demonitor %s -> %s (%s)", monitoring, monitored, ref)
     for (p <- process(monitored)) {
       p.demonitor(ref)
@@ -747,8 +747,18 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
   }
 
-  def process(pid : Pid) : Option[ProcessLike] = {
-    Option(processes.get(pid))
+  def process(pidOrProc : Any) : Option[ProcessLike] = pidOrProc match {
+    case pid : Pid =>
+      Option(processes.get(pid))
+    case regName : Symbol =>
+      whereis(regName) match {
+        case Some(pid : Pid) =>
+          process(pid)
+        case None =>
+          None
+      }
+    case (regname : Symbol, node : Symbol) =>
+      None
   }
 
   def unlink(from : Pid, to : Pid) {
@@ -761,8 +771,27 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
   }
 
-  def isLocal(pid : Pid) : Boolean = {
-    pid.node == name //&& pid.creation == creation
+  def isLocal(pidOrProc : Any) : Boolean = pidOrProc match {
+    case pid : Pid =>
+      pid.node == name
+    case regName : Symbol =>
+      whereis(regName) match {
+        case Some(pid : Pid) =>
+          pid.node == name
+        case None =>
+          false
+      }
+    case (regName : Symbol, node : Symbol) =>
+      node == name
+  }
+
+  def nodeOf(pidOrProc : Any) : Symbol = pidOrProc match {
+    case pid : Pid =>
+      pid.node
+    case regName : Symbol =>
+      name
+    case (regName : Symbol, node : Symbol) =>
+      node
   }
 
   def disconnected(peer : Symbol, channel: Channel) {

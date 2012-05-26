@@ -215,9 +215,14 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
   }
 
   def writeAtom(buffer : ChannelBuffer, s : Symbol) {
-    buffer.writeByte(100)
     val bytes = s.name.getBytes
-    buffer.writeShort(bytes.length)
+    if (bytes.length < 256) {
+      buffer.writeByte(115)
+      buffer.writeByte(bytes.length)
+    } else {
+      buffer.writeByte(100)
+      buffer.writeShort(bytes.length)
+    }
     buffer.writeBytes(bytes)
   }
 

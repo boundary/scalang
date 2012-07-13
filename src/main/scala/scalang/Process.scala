@@ -111,6 +111,12 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging wi
     msgChannel.publish(msg)
   }
 
+  override def exit(msg : Any) {
+    super.exit(msg)
+    metricsRegistry.removeMetric(getClass, "messages", instrumentedName)
+    metricsRegistry.removeMetric(getClass, "execution", instrumentedName)
+  }
+
   override def handleExit(from : Pid, msg : Any) {
     exitChannel.publish((from,msg))
   }

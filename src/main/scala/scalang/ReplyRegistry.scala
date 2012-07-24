@@ -30,7 +30,6 @@ trait ReplyRegistry {
       if (waiter == null) {
         false
       } else {
-/*        println("offering reply to waiter " + waiter)*/
         waiter.offer(reply)
         true
       }

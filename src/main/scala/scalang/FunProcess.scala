@@ -18,16 +18,19 @@ package scalang
 import scalang.node._
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
-class FunProcess(fun : Mailbox => Unit, ctx : ProcessContext) extends Process(ctx) {
+class FunProcess(fun : Mailbox => Unit, ctx : ProcessContext) extends ProcessAdapter {
   val queue = new LinkedBlockingQueue[Any]
+  val referenceCounter = ctx.referenceCounter
+  val self = ctx.pid
+  val fiber = ctx.fiber
   val parentPid = self
   val parentRef = referenceCounter
-
+  val parent = this
   val mbox = new Mailbox {
     def self = parentPid
     def referenceCounter = parentRef
 
-    override def handleMessage(msg : Any) {
+    def handleMessage(msg : Any) {
       queue.offer(msg)
     }
 
@@ -38,6 +41,16 @@ class FunProcess(fun : Mailbox => Unit, ctx : ProcessContext) extends Process(ct
     def receive(timeout : Long) : Option[Any] = {
       Option(queue.poll(timeout, TimeUnit.MILLISECONDS))
     }
+    
+    def send(pid : Pid, msg : Any) = parent.notifySend(pid,msg)
+    
+    def send(name : Symbol, msg : Any) = parent.notifySend(name,msg)
+    
+    def send(dest : (Symbol,Symbol), from : Pid, msg : Any) = parent.notifySend(dest,from,msg)
+    
+    def exit(reason : Any) = parent.exit(reason)
+    
+    def link(to : Pid) = parent.link(to)
   }
 
 
@@ -50,8 +63,15 @@ class FunProcess(fun : Mailbox => Unit, ctx : ProcessContext) extends Process(ct
     })
   }
 
-  override def onMessage(msg : Any) {
+  override def handleMessage(msg : Any) {
     queue.offer(msg)
   }
 
+  override def handleExit(from : Pid, reason : Any) {
+    queue.offer(('EXIT, from, reason))
+  }
+  
+  override def handleMonitorExit(monitored : Any, ref : Reference, reason : Any) {
+    queue.offer(('DOWN, ref, 'process, monitored, reason))
+  }
 }

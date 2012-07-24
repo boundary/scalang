@@ -24,4 +24,5 @@ trait ProcessContext {
   def referenceCounter : ReferenceCounter
   def fiber : Fiber
   def replyRegistry : ReplyRegistry
+  var adapter : ProcessAdapter
 }

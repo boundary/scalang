@@ -1,6 +1,6 @@
 //
-// Copyright 2011, Boundary
-//
+// Copyright 2012, Boundary
+// 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,23 +16,19 @@
 package scalang.node
 
 import scalang._
+import org.cliffc.high_scale_lib.NonBlockingHashSet
+import org.cliffc.high_scale_lib.NonBlockingHashMap
+import scala.collection.JavaConversions._
 
-trait LinkListenable {
-  @volatile var linkListeners : List[LinkListener] = Nil
+class ProcessLauncher[T <: Process](clazz : Class[T], ctx : ProcessContext) extends ProcessHolder(ctx) {
+  val referenceCounter = ctx.referenceCounter
+  var process : Process = null
 
-  def addLinkListener(listener : LinkListener) {
-    linkListeners = listener :: linkListeners
+  def init {
+    val constructor = clazz.getConstructor(classOf[ProcessContext])
+    ctx.adapter = this
+    process = constructor.newInstance(ctx)
   }
 
-  def notifyBreak(link : Link, reason : Any) {
-    for (listener <- linkListeners) {
-      listener.break(link, reason)
-    }
-  }
-
-  def notifyDeliverLink(link : Link) {
-    for (listener <- linkListeners) {
-      listener.deliverLink(link)
-    }
-  }
+  def cleanup = fiber.dispose
 }

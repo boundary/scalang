@@ -192,7 +192,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   val tickTime = config.tickTime
   val poolFactory = config.poolFactory
   var creation : Int = 0
-  val processes = new NonBlockingHashMap[Pid,ProcessLike]
+  val processes = new NonBlockingHashMap[Pid,ProcessAdapter]
   val registeredNames = new NonBlockingHashMap[Symbol,Pid]
   val channels = AtomicMap.atomicNBHM[Symbol,Channel]
   val links = AtomicMap.atomicNBHM[Channel,NonBlockingHashSet[Link]]
@@ -221,22 +221,25 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
   }
 
-  def spawnMbox : Mailbox = {
+  def spawnMbox : MailboxProcess = {
     val p = createPid
     val n = this
-    val box = new MailboxProcess(new ProcessContext {
+    val ctx = new ProcessContext {
       val pid = p
       val referenceCounter = n.referenceCounter
       val node = n
       val fiber = null
       val replyRegistry = n
-    })
-    box.addExitListener(this)
-    box.addSendListener(this)
-    box.addLinkListener(this)
-    box.addMonitorListener(this)
-    processes.put(p, box)
-    box
+      var adapter : ProcessAdapter = null
+    }
+    val mailbox = new MailboxProcess(ctx)
+    ctx.adapter = mailbox
+    mailbox.addExitListener(this)
+    mailbox.addSendListener(this)
+    mailbox.addLinkListener(this)
+    mailbox.addMonitorListener(this)
+    processes.put(p, mailbox)
+    mailbox
   }
 
   def spawnMbox(regName : String) : Mailbox = spawnMbox(Symbol(regName))
@@ -266,8 +269,10 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       val node = n
       val fiber = factory.create(poolFactory.createBatchExecutor(false))
       val replyRegistry = n
+      var adapter : ProcessAdapter = null
     }
     val process = new FunProcess(fun, ctx)
+    ctx.adapter = process
     process.addExitListener(this)
     process.addSendListener(this)
     process.addLinkListener(this)
@@ -290,15 +295,16 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       val node = n
       val fiber = factory.create(poolFactory.createBatchExecutor(name.name,false))
       val replyRegistry = n
+      var adapter : ProcessAdapter = null
     }
     val process = new FunProcess(fun, ctx)
+    ctx.adapter = process
     process.addExitListener(this)
     process.addSendListener(this)
     process.addLinkListener(this)
     process.addMonitorListener(this)
     process.fiber.start
     process.start
-    p
     registeredNames.put(name, p)
     p
   }
@@ -311,7 +317,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
   def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
-    val process = createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(regName.name, false))
+    createProcess(mf.erasure.asInstanceOf[Class[T]], pid, poolFactory.createBatchExecutor(regName.name, false))
     registeredNames.put(regName, pid)
     pid
   }
@@ -343,8 +349,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
   def spawnService[T <: Service[A], A <: Product](args : A, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
-    val process = createService(mf.erasure.asInstanceOf[Class[T]], pid, args, poolFactory.createBatchExecutor(reentrant))
-/*    process.init(args)*/
+    createService(mf.erasure.asInstanceOf[Class[T]], pid, args, poolFactory.createBatchExecutor(reentrant))
     pid
   }
 
@@ -362,7 +367,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
   def spawnService[T <: Service[A], A <: Product](regName : Symbol, args : A, reentrant : Boolean)(implicit mf : Manifest[T]) : Pid = {
     val pid = createPid
-    val process = createService(mf.erasure.asInstanceOf[Class[T]], pid, args, poolFactory.createBatchExecutor(regName.name, reentrant))
+    createService(mf.erasure.asInstanceOf[Class[T]], pid, args, poolFactory.createBatchExecutor(regName.name, reentrant))
     registeredNames.put(regName, pid)
     pid
   }
@@ -375,8 +380,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     send('cluster, ('nodeup, node))
   }
 
-  protected def createService[A <: Product, T <: Service[A]](clazz : Class[T], p : Pid, a : A, batch : BatchExecutor) : T = {
-    val constructor = clazz.getConstructor(classOf[ServiceContext[_]])
+  protected def createService[A <: Product, T <: Service[A]](clazz : Class[T], p : Pid, a : A, batch : BatchExecutor) {
     val n = this
     val ctx = new ServiceContext[A] {
       val pid = p
@@ -385,19 +389,24 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       val fiber = factory.create(batch)
       val replyRegistry = n
       val args = a
+      var adapter : ProcessAdapter = null
     }
-    val process = constructor.newInstance(ctx)
-    process.addExitListener(this)
-    process.addSendListener(this)
-    process.addLinkListener(this)
-    process.addMonitorListener(this)
-    processes.put(p, process)
-    process.fiber.start
-    process
+    val adapter = new ServiceLauncher[A,T](clazz, ctx)
+    ctx.adapter = adapter
+    adapter.addExitListener(this)
+    adapter.addSendListener(this)
+    adapter.addLinkListener(this)
+    adapter.addMonitorListener(this)
+    ctx.fiber.start
+    ctx.fiber.execute(new Runnable {
+      def run {
+        adapter.init
+      }
+    })
+    processes.put(p, adapter)
   }
 
-  protected def createProcess[T <: Process](clazz : Class[T], p : Pid, batch : BatchExecutor) : T = {
-    val constructor = clazz.getConstructor(classOf[ProcessContext])
+  protected def createProcess[T <: Process](clazz : Class[T], p : Pid, batch : BatchExecutor) {
     val n = this
     val ctx = new ProcessContext {
       val pid = p
@@ -405,15 +414,21 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       val node = n
       val fiber = factory.create(batch)
       val replyRegistry = n
+      var adapter : ProcessAdapter = null
     }
-    val process = constructor.newInstance(ctx)
-    process.addExitListener(this)
-    process.addSendListener(this)
-    process.addLinkListener(this)
-    process.addMonitorListener(this)
-    processes.put(p, process)
-    process.fiber.start
-    process
+    val adapter = new ProcessLauncher[T](clazz, ctx)
+    ctx.adapter = adapter
+    adapter.addExitListener(this)
+    adapter.addSendListener(this)
+    adapter.addLinkListener(this)
+    adapter.addMonitorListener(this)
+    ctx.fiber.start
+    ctx.fiber.execute(new Runnable {
+      def run {
+        adapter.init
+      }
+    })
+    processes.put(p, adapter)
   }
 
   def register(regName : String, pid : Pid) {
@@ -464,12 +479,11 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
     if (isLocal(to)) {
       for (p <- process(to)) {
-        p.linkWithoutNotify(from)
+        p.registerLink(from)
       }
     } else {
       getOrConnectAndSend(to.node, LinkMessage(from, to), { channel =>
         val set = links.getOrElseUpdate(channel, new NonBlockingHashSet[Link])
-/*        println("adding remote link " + link + " to channel " + channel)*/
         set.add(link)
       })
     }
@@ -511,7 +525,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
     process(from) match {
       case Some(p : Process) =>
-        val link = p.linkWithoutNotify(to)
+        val link = p.registerLink(to)
         if (!isLocal(from))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
       case None =>
@@ -521,7 +535,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
     process(to) match {
       case Some(p : Process) =>
-        val link = p.linkWithoutNotify(from)
+        val link = p.registerLink(from)
         if (!isLocal(to))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
 
@@ -564,9 +578,10 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       log.warn("Try to monitor between non-local pids: %s -> %s", monitoring, monitored)
       return
     }
-
+    log.debug("pids %s", processes.keys.toList)
     process(monitored) match {
       case Some(p) =>
+        log.debug("adding monitor for %s", p)
         val monitor = p.registerMonitor(monitoring, ref)
         if (!isLocal(monitored))
           monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor]).add(monitor)
@@ -589,7 +604,9 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     val monitoring = monitor.monitoring
     val monitored = monitor.monitored
     val ref = monitor.ref
+    log.debug("handling monitor exit for %s", monitor)
     if (isLocal(monitoring)) {
+      log.debug("monitoring is local %s", monitoring)
       for (proc <- process(monitoring)) {
         proc.handleMonitorExit(monitored, ref, reason)
       }
@@ -721,6 +738,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
   //this only gets called from a remote link breakage()
   def remoteBreak(link : Link, reason : Any) {
+
     val from = link.from
     val to = link.to
     for (proc <- process(to)) {
@@ -739,7 +757,6 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     val to = link.to
     if (isLocal(to)) {
       for (proc <- process(to)) {
-/*        println("exiting " + proc)*/
         proc.handleExit(from, reason)
       }
     } else {
@@ -747,7 +764,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
   }
 
-  def process(pidOrProc : Any) : Option[ProcessLike] = pidOrProc match {
+  def process(pidOrProc : Any) : Option[ProcessAdapter] = pidOrProc match {
     case pid : Pid =>
       Option(processes.get(pid))
     case regName : Symbol =>
@@ -815,6 +832,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
 
   def getOrConnectAndSend(peer : Symbol, msg : Any, afterHandshake : Channel => Unit = { channel => Unit }) {
+    log.debug("node %s sending %s", this, msg)
     val channel = channels.getOrElseUpdate(peer, {
       connectAndSend(peer, None)
     })

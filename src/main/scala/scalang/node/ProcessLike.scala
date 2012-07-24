@@ -20,111 +20,41 @@ import org.cliffc.high_scale_lib.NonBlockingHashSet
 import org.cliffc.high_scale_lib.NonBlockingHashMap
 import scala.collection.JavaConversions._
 
-trait ProcessLike extends ExitListenable with SendListenable with LinkListenable with MonitorListenable {
-  @volatile var state = 'alive
+trait ProcessLike {
+  def adapter : ProcessAdapter
   def self : Pid
-
-  def referenceCounter : ReferenceCounter
-
+  
+  def send(pid : Pid, msg : Any) = adapter.notifySend(pid,msg)
+  def send(name : Symbol, msg : Any) = adapter.notifySend(name,msg)
+  def send(dest : (Symbol,Symbol), from : Pid, msg : Any) = adapter.notifySend(dest,from,msg)
+  
   def handleMessage(msg : Any)
-
-  def send(pid : Pid, msg : Any) = notifySend(pid,msg)
-  def send(name : Symbol, msg : Any) = notifySend(name,msg)
-  def send(dest : (Symbol,Symbol), from : Pid, msg : Any) = notifySend(dest,from,msg)
-
+  
   def handleExit(from : Pid, reason : Any) {
     exit(reason)
   }
 
-  def makeRef : Reference = {
-    referenceCounter.makeRef
-  }
-
+  def handleMonitorExit(monitored : Any, ref : Reference, reason : Any)
+  
   def exit(reason : Any) {
-    if (state != 'alive) return
-    state = 'dead
-    for (link <- links) {
-      link.break(reason)
-    }
-    for (m <- monitors.values) {
-      m.monitorExit(reason)
-    }
-    for(e <- exitListeners) {
-      e.handleExit(self, reason)
-    }
+    adapter.exit(reason)
   }
-
-/*  def spawn[T <: Process](implicit mf : Manifest[T]) : Pid = node.spawn[T](mf)
-  def spawn[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid = node.spawn[T](regName)(mf)
-  def spawn[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid = node.spawn[T](regName)(mf)
-
-  def spawnLink[T <: Process](implicit mf : Manifest[T]) : Pid = {
-    val pid = node.spawn[T](mf)
-    link(pid)
-    pid
-  }
-
-  def spawnLink[T <: Process](regName : String)(implicit mf : Manifest[T]) : Pid = {
-    val pid = node.spawn[T](regName)(mf)
-    link(pid)
-    pid
-  }
-
-  def spawnLink[T <: Process](regName : Symbol)(implicit mf : Manifest[T]) : Pid = {
-    val pid = node.spawn[T](regName)(mf)
-    link(pid)
-    pid
-  }*/
-
-  val links = new NonBlockingHashSet[Link]
-  val monitors = new NonBlockingHashMap[Reference, Monitor]
-
-  def link(to : Pid) {
-    linkWithoutNotify(to)
-    for (listener <- linkListeners) {
-      listener.deliverLink(Link(self, to))
-    }
-  }
-
-  def linkWithoutNotify(to : Pid) : Link = {
-    val l = Link(self, to)
-    for (listener <- linkListeners) {
-      l.addLinkListener(listener)
-    }
-    links.add(l)
-    l
-  }
+  
+  def makeRef = adapter.makeRef
 
   def unlink(to : Pid) {
-    links.remove(Link(self, to))
+    adapter.unlink(to)
   }
-
-  def handleMonitorExit(monitored : Any, ref : Reference, reason : Any) {
-    // Empty
+  
+  def link(to : Pid) {
+    adapter.link(to)
   }
 
   def monitor(monitored : Any): Reference = {
-    val m = Monitor(self, monitored, makeRef)
-    for (listener <- monitorListeners) {
-      listener.deliverMonitor(m)
-    }
-    m.ref
+    adapter.monitor(monitored)
   }
-
+  
   def demonitor(ref : Reference) {
-    monitors.remove(ref)
+    adapter.demonitor(ref)
   }
-
-  def registerMonitor(monitoring : Pid, ref : Reference): Monitor = {
-    registerMonitor(Monitor(monitoring, self, ref))
-  }
-
-  private def registerMonitor(m : Monitor): Monitor = {
-    for (listener <- monitorListeners) {
-      m.addMonitorListener(listener)
-    }
-    monitors.put(m.ref, m)
-    m
-  }
-
 }

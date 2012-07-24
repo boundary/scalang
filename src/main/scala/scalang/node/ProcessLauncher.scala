@@ -29,6 +29,4 @@ class ProcessLauncher[T <: Process](clazz : Class[T], ctx : ProcessContext) exte
     ctx.adapter = this
     process = constructor.newInstance(ctx)
   }
-
-  def cleanup = fiber.dispose
 }

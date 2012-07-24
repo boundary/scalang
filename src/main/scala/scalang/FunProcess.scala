@@ -74,4 +74,6 @@ class FunProcess(fun : Mailbox => Unit, ctx : ProcessContext) extends ProcessAda
   override def handleMonitorExit(monitored : Any, ref : Reference, reason : Any) {
     queue.offer(('DOWN, ref, 'process, monitored, reason))
   }
+  
+  def cleanup = fiber.dispose
 }

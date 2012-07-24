@@ -86,6 +86,12 @@ abstract class ProcessHolder(ctx : ProcessContext) extends ProcessAdapter {
   override def handleMonitorExit(monitored : Any, ref : Reference, reason : Any) {
     monitorChannel.publish((monitored,ref,reason))
   }
+  
+  def cleanup {
+    fiber.dispose
+    metricsRegistry.removeMetric(getClass, "messages", instrumentedName)
+    metricsRegistry.removeMetric(getClass, "execution", instrumentedName)
+  }
 }
 
 trait ProcessAdapter extends ExitListenable with SendListenable with LinkListenable with MonitorListenable with Instrumented with Logging {
@@ -96,6 +102,7 @@ trait ProcessAdapter extends ExitListenable with SendListenable with LinkListena
   val links = new NonBlockingHashSet[Link]
   val monitors = new NonBlockingHashMap[Reference, Monitor]  
   def instrumentedName = self.toErlangString
+  def cleanup
   
   def handleMessage(msg : Any)
   def handleExit(from : Pid, msg : Any)
@@ -113,7 +120,7 @@ trait ProcessAdapter extends ExitListenable with SendListenable with LinkListena
     for(e <- exitListeners) {
       e.handleExit(self, reason)
     }
-    
+    cleanup
   }
   
   def unlink(to : Pid) {

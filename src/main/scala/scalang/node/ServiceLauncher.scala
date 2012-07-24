@@ -29,6 +29,4 @@ class ServiceLauncher[A <: Product, T <: Process](clazz : Class[T], ctx : Servic
     ctx.adapter = this
     process = constructor.newInstance(ctx)
   }
-
-  def cleanup = fiber.dispose
 }

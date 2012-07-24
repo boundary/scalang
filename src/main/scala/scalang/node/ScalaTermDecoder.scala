@@ -196,7 +196,11 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
       case 115 => //small atom
         val length = buffer.readUnsignedByte
         val str = ScalaTermDecoder.fastString(buffer, length)
-        CachedSymbol(str)
+        CachedSymbol(str) match {
+          case 'true => true
+          case 'false => false
+          case atom => atom
+        }
       case 117 => //fun
         val numFree = buffer.readInt
         val pid = readTerm(buffer).asInstanceOf[Pid]

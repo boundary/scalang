@@ -215,9 +215,14 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
   }
 
   def writeAtom(buffer : ChannelBuffer, s : Symbol) {
-    buffer.writeByte(100)
     val bytes = s.name.getBytes
-    buffer.writeShort(bytes.length)
+    if (bytes.length < 256) {
+      buffer.writeByte(115)
+      buffer.writeByte(bytes.length)
+    } else {
+      buffer.writeByte(100)
+      buffer.writeShort(bytes.length)
+    }
     buffer.writeBytes(bytes)
   }
 
@@ -232,8 +237,16 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
   }
 
   def writeFloat(buffer : ChannelBuffer, d : Double) {
-    buffer.writeByte(70)
-    buffer.writeLong(java.lang.Double.doubleToLongBits(d))
+    if (d.isNaN) {
+      writeAtom(buffer, 'nan)
+    } else if (d.isPosInfinity) {
+      writeAtom(buffer, 'infinity)
+    } else if (d.isNegInfinity) {
+      writeAtom(buffer, Symbol("-infinity"))
+    } else {
+      buffer.writeByte(70)
+      buffer.writeLong(java.lang.Double.doubleToLongBits(d))
+    }
   }
 
   def writeStringFloat(buffer : ChannelBuffer, d : Double) {

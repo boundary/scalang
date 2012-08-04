@@ -19,7 +19,7 @@ From Maven:
     <dependency>
       <groupId>com.boundary</groupId>
       <artifactId>scalang-scala_2.9.1</artifactId>
-      <version>0.9</version>
+      <version>0.18</version>
     </dependency>
   </dependencies>
 </code>
@@ -31,7 +31,7 @@ From SBT:
 <code>
   val boundaryPublic = "Boundary Public Repo" at "http://maven.boundary.com/artifactory/repo"
 
-  val scalang = "com.boundary" %% "scalang" % "0.9"
+  val scalang = "com.boundary" %% "scalang" % "0.18"
 </code>
 </pre>
 

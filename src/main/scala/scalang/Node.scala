@@ -672,9 +672,12 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   def waitReply(from : Pid, ref : Reference, channel : BlockingQueue[Any], timeout : Long) : Any = {
     channel.poll(timeout, TimeUnit.MILLISECONDS) match {
       case null =>
-        removeReplyQueue(from,ref)
+        
+/*        removeReplyQueue(from,ref)*/
+/*        ignoreRef(ref)*/
         ('error, 'timeout)
-      case response => response
+      case response =>
+        response
     }
   }
 

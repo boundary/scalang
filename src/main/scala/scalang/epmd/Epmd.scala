@@ -16,12 +16,10 @@
 package scalang.epmd
 
 import java.net._
-import java.util.concurrent.Executors
 import org.jboss.{netty => netty}
 import netty.bootstrap._
 import netty.channel._
 import socket.nio._
-import netty.handler.codec.frame._
 import overlock.threadpool._
 
 object Epmd {
@@ -59,13 +57,11 @@ class Epmd(val host : String, val port : Int) {
   val connectFuture = bootstrap.connect(new InetSocketAddress(host, port))
   val channel = connectFuture.awaitUninterruptibly.getChannel
   if(!connectFuture.isSuccess) {
-    bootstrap.releaseExternalResources
     throw connectFuture.getCause
   }
 
   def close {
     channel.close
-    bootstrap.releaseExternalResources
   }
 
   def alive(portNo : Int, nodeName : String) : Option[Int] = {

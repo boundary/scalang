@@ -26,6 +26,8 @@ import overlock.threadpool._
 
 object Epmd {
   val defaultPort = 4369
+  lazy val bossPool = ThreadPool.instrumentedElastic("scalang.epmd", "boss", 1, 20)
+  lazy val workerPool = ThreadPool.instrumentedElastic("scalang.epmd", "worker", 1, 20)
 
   def apply(host : String) : Epmd = {
     val port = Option(System.getenv("ERL_EPMD_PORT")).map(_.toInt).getOrElse(defaultPort)
@@ -40,8 +42,8 @@ object Epmd {
 class Epmd(val host : String, val port : Int) {
   val bootstrap = new ClientBootstrap(
     new NioClientSocketChannelFactory(
-      ThreadPool.instrumentedElastic("scalang.epmd", "boss", 1, 20),
-      ThreadPool.instrumentedElastic("scalang.epmd", "worker", 1, 20)))
+      Epmd.bossPool,
+      Epmd.workerPool))
 
   val handler = new EpmdHandler
 

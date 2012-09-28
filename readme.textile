@@ -218,21 +218,21 @@ Most modern Erlang applications are built using the OTP framework, and in partic
   class EchoService(ctx : ServiceContext[EchoServiceArgs]) extends Service(ctx) {
     val EchoServiceArgs(name) = ctx.args
 
-    override def handleCall(from : Pid, request : Any) : Any = {
+    override def handleCall(tag: (Pid, Reference), request: Any): Any = { 
       name + " " + request
-    }
+    }   
 
     override def handleCast(request : Any) {
       log.info("Can't echo a cast. %s", request)
-    }
+    }   
 
     override def handleInfo(request : Any) {
       log.info("A wild message appeared. %s, request")
-    }
+    }   
   }
 
   val node = Node("test", cookie)
-  val pid = node.spawnService[EchoService]("echo", EchoServiceArgs("test_echo"))
+  val pid = node.spawnService[EchoService, EchoServiceArgs]("echo", EchoServiceArgs("test_echo"))
 </code>
 </pre>
 

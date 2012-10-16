@@ -29,9 +29,18 @@ object Escript {
 
 object EpmdCmd {
   def apply() : SysProcess = {
-    val builder = new ProcessBuilder("epmd")
+    val osName = System.getProperty("os.name").toLowerCase
+    var builder : ProcessBuilder = null
+    if (!osName.contains("win")) {
+      builder = new ProcessBuilder("bash", "-c", "export PATH=" + formatPath + " && epmd")
+    } else {
+      builder = new ProcessBuilder("epmd")
+    }
     builder.start
   }
+
+  val additionalPaths = List("/usr/local/bin", "/usr/local/sbin")
+  def formatPath: String = additionalPaths.mkString(":") + ":" + System.getenv("PATH")
 }
 
 object ReadLine {

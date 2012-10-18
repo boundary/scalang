@@ -524,7 +524,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
 
     process(from) match {
-      case Some(p : Process) =>
+      case Some(p : ProcessAdapter) =>
         val link = p.registerLink(to)
         if (!isLocal(from))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
@@ -534,7 +534,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
 
     process(to) match {
-      case Some(p : Process) =>
+      case Some(p : ProcessAdapter) =>
         val link = p.registerLink(from)
         if (!isLocal(to))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)

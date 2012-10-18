@@ -29,8 +29,9 @@ import overlock.atomicmap._
 import org.jetlang._
 import core._
 import java.io._
-import fibers.PoolFiberFactory
+import fibers.CappedFiberFactory
 import core.BatchExecutorImpl
+import netty.handler.execution.ExecutionHandler
 import scala.collection.JavaConversions._
 import scalang.epmd._
 import scalang.util._
@@ -200,7 +201,8 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   val pidCount = new AtomicInteger(0)
   val pidSerial = new AtomicInteger(0)
   val executor = poolFactory.createActorPool
-  val factory = new PoolFiberFactory(executor)
+  val factory = new CappedFiberFactory(executor, 1000)
+  val executionHandler = new ExecutionHandler(poolFactory.createExecutorPool)
   val server = new ErlangNodeServer(this,config.typeFactory)
   val localEpmd = Epmd("localhost")
   localEpmd.alive(server.port, splitNodename(name)) match {

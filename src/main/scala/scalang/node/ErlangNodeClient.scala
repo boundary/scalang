@@ -16,15 +16,14 @@
 package scalang.node
 
 import java.net.InetSocketAddress
-import java.util.concurrent.Executors
 import org.jboss.{netty => netty}
 import scalang._
 import netty.channel._
 import netty.bootstrap._
 import netty.handler.codec.frame._
-import netty.handler.timeout._
-import netty.util.HashedWheelTimer
 import socket.nio.NioClientSocketChannelFactory
+import com.codahale.logula.Logging
+
 
 class ErlangNodeClient(
     node : ErlangNode,
@@ -33,7 +32,9 @@ class ErlangNodeClient(
     port : Int,
     control : Option[Any],
     typeFactory : TypeFactory,
-    afterHandshake : Channel => Unit) {
+    typeEncoder : TypeEncoder,
+    afterHandshake : Channel => Unit) extends Logging
+{
   val bootstrap = new ClientBootstrap(
     new NioClientSocketChannelFactory(
       node.poolFactory.createBossPool,
@@ -52,7 +53,7 @@ class ErlangNodeClient(
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
       pipeline.addLast("erlangDecoder", new ScalaTermDecoder(peer, typeFactory))
-      pipeline.addLast("erlangEncoder", new ScalaTermEncoder(peer))
+      pipeline.addLast("erlangEncoder", new ScalaTermEncoder(peer, typeEncoder))
       pipeline.addLast("erlangHandler", new ErlangHandler(node, afterHandshake))
 
       pipeline

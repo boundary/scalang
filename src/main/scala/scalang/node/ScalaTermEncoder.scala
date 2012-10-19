@@ -30,7 +30,7 @@ import scalang.util.CamelToUnder._
 import com.codahale.logula.Logging
 import com.yammer.metrics.scala._
 
-class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with Instrumented {
+class ScalaTermEncoder(peer: Symbol, encoder: TypeEncoder) extends OneToOneEncoder with Logging with Instrumented {
 
   val encodeTimer = metrics.timer("encoding", peer.name)
 
@@ -72,6 +72,8 @@ class ScalaTermEncoder(peer: Symbol) extends OneToOneEncoder with Logging with I
   }
 
   def encodeObject(buffer : ChannelBuffer, obj : Any) : Unit = obj match {
+    case encoder(_) =>
+      encoder.encode(obj, buffer)
     case i : Int if i >= 0 && i <= 255 =>
       writeSmallInteger(buffer, i)
     case i : Int =>

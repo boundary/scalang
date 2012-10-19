@@ -16,13 +16,20 @@
 package scalang
 
 import util._
+import org.jboss.netty.buffer.ChannelBuffer
 
 case class NodeConfig(
   poolFactory : ThreadPoolFactory = new DefaultThreadPoolFactory,
   clusterListener : Option[ClusterListener] = None,
   typeFactory : TypeFactory = NoneTypeFactory,
+  typeEncoder: TypeEncoder = NoneTypeEncoder,
   tickTime : Int = 60)
 
 object NoneTypeFactory extends TypeFactory {
   def createType(name : Symbol, arity : Int, reader : TermReader) = None
+}
+
+object NoneTypeEncoder extends TypeEncoder {
+  def unapply(obj: Any) = { None }
+  def encode(obj: Any, buffer: ChannelBuffer) {}
 }

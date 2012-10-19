@@ -16,15 +16,11 @@
 package scalang.node
 
 import java.net.InetSocketAddress
-import java.util.concurrent.Executors
 import org.jboss.{netty => netty}
-import netty.buffer.ChannelBuffer
 import scalang._
 import netty.channel._
 import netty.bootstrap._
 import netty.handler.codec.frame._
-import netty.handler.timeout._
-import netty.util.HashedWheelTimer
 import socket.nio.NioClientSocketChannelFactory
 import com.codahale.logula.Logging
 

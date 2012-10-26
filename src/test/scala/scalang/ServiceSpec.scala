@@ -53,7 +53,25 @@ class ServiceSpec extends SpecificationWithJUnit {
       node.send(service, (ref, "barf"))
       mbox.receive must ==("barf")
     }
+    
+    "trap exits" in {
+      node = Node(Symbol("test@localhost"), cookie)
+      val service = node.spawnService[TrapExitService,NoArgs](NoArgs)
+      val mbox = node.spawnMbox
+      mbox.link(service)
+      mbox.exit('terminate)
+      Thread.sleep(1000)
+      node.isAlive(service) must ==(true)
+    }
   }
+}
+
+class TrapExitService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {
+  
+  override def trapExit(from : Pid, reason : Any) {
+    println("herp " + reason)
+  }
+  
 }
 
 class CallAndReceiveService(ctx : ServiceContext[NoArgs]) extends Service(ctx) {

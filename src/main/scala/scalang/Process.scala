@@ -47,6 +47,10 @@ abstract class Process(ctx : ProcessContext) extends ProcessLike with Logging {
     onMessage(msg)
   }
 
+  override def handleExit(from : Pid, msg : Any) {
+    trapExit(from, msg)
+  }
+
   /**
    * Subclasses should override this method with their own message handlers
    */

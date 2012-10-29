@@ -51,6 +51,7 @@ object StupidObjectSizeEstimator extends ObjectSizeEstimator {
 class DefaultThreadPoolFactory extends ThreadPoolFactory {
   val cpus = Runtime.getRuntime.availableProcessors
   val max_threads = if ((2 * cpus) < 8) 8 else 2*cpus
+  val max_memory = Runtime.getRuntime.maxMemory / 2
   //100 mb
   /*lazy val bossPool = new OrderedMemoryAwareThreadPoolExecutor(max_threads, 104857600, 104857600, 1000, TimeUnit.SECONDS, new NamedThreadFactory("boss"))
   //500 mb
@@ -59,7 +60,7 @@ class DefaultThreadPoolFactory extends ThreadPoolFactory {
   **/
   lazy val bossPool = ThreadPool.instrumentedElastic("scalang", "boss", 2, max_threads)
   lazy val workerPool = ThreadPool.instrumentedElastic("scalang", "worker", 2, max_threads)
-  lazy val executorPool = new OrderedMemoryAwareThreadPoolExecutor(max_threads, 524288000, 524288000, 1000, TimeUnit.SECONDS, new NamedThreadFactory("executor"))
+  lazy val executorPool = new OrderedMemoryAwareThreadPoolExecutor(max_threads, max_memory, max_memory, 1000, TimeUnit.SECONDS, new NamedThreadFactory("executor"))
   lazy val actorPool = ThreadPool.instrumentedElastic("scalang", "actor", 2, max_threads)
   lazy val batchExecutor = new BatchExecutorImpl
 

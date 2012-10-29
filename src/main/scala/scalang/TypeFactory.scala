@@ -22,6 +22,12 @@ trait TypeFactory {
   def createType(name : Symbol, arity : Int, reader : TermReader) : Option[Any]
 }
 
+trait TypeEncoder {
+  def unapply(obj : Any) : Option[Any]
+  
+  def encode(obj : Any, buffer : ChannelBuffer)
+}
+
 class TermReader(val buffer : ChannelBuffer, decoder : ScalaTermDecoder) {
   var m : Int = 0
 

@@ -45,7 +45,7 @@ class ErlangNodeClient(
 
       val handshakeDecoder = new HandshakeDecoder
       handshakeDecoder.mode = 'challenge //first message on the client side is challenge, not name
-
+      pipeline.addLast("executionHandler", node.executionHandler)
       pipeline.addLast("handshakeFramer", new LengthFieldBasedFrameDecoder(Short.MaxValue, 0, 2, 0, 2))
       pipeline.addLast("handshakeDecoder", handshakeDecoder)
       pipeline.addLast("handshakeEncoder", new HandshakeEncoder)

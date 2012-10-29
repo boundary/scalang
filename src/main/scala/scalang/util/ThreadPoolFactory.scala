@@ -4,6 +4,8 @@ import overlock.threadpool._
 import java.util.concurrent._
 import atomic._
 import org.jetlang.core._
+import org.jboss.netty.handler.execution.{MemoryAwareThreadPoolExecutor, OrderedMemoryAwareThreadPoolExecutor}
+import org.jboss.netty.util.ObjectSizeEstimator
 
 object ThreadPoolFactory {
   @volatile var factory : ThreadPoolFactory = new DefaultThreadPoolFactory
@@ -24,6 +26,8 @@ trait ThreadPoolFactory {
    */
   def createWorkerPool : Executor
 
+  def createExecutorPool : Executor
+
   /**
    * The jetlang actor pool.  This thread pool will be responsible for executing any actors
    * that are launched with an unthreaded batch executor.
@@ -40,12 +44,22 @@ trait ThreadPoolFactory {
   def createBatchExecutor(reentrant : Boolean) : BatchExecutor
 }
 
+object StupidObjectSizeEstimator extends ObjectSizeEstimator {
+  def estimateSize(o : Any) = 1
+}
+
 class DefaultThreadPoolFactory extends ThreadPoolFactory {
   val cpus = Runtime.getRuntime.availableProcessors
   val max_threads = if ((2 * cpus) < 8) 8 else 2*cpus
-
+  //100 mb
+  /*lazy val bossPool = new OrderedMemoryAwareThreadPoolExecutor(max_threads, 104857600, 104857600, 1000, TimeUnit.SECONDS, new NamedThreadFactory("boss"))
+  //500 mb
+  lazy val workerPool = new OrderedMemoryAwareThreadPoolExecutor(max_threads, 524288000, 524288000, 1000, TimeUnit.SECONDS, new NamedThreadFactory("worker"))
+  lazy val actorPool = new MemoryAwareThreadPoolExecutor(max_threads, 100, 100, 1000, TimeUnit.SECONDS, StupidObjectSizeEstimator, new NamedThreadFactory("actor"))
+  **/
   lazy val bossPool = ThreadPool.instrumentedElastic("scalang", "boss", 2, max_threads)
   lazy val workerPool = ThreadPool.instrumentedElastic("scalang", "worker", 2, max_threads)
+  lazy val executorPool = new OrderedMemoryAwareThreadPoolExecutor(max_threads, 524288000, 524288000, 1000, TimeUnit.SECONDS, new NamedThreadFactory("executor"))
   lazy val actorPool = ThreadPool.instrumentedElastic("scalang", "actor", 2, max_threads)
   lazy val batchExecutor = new BatchExecutorImpl
 
@@ -57,6 +71,10 @@ class DefaultThreadPoolFactory extends ThreadPoolFactory {
 
   def createWorkerPool : Executor = {
     workerPool
+  }
+  
+  def createExecutorPool : Executor = {
+    executorPool
   }
 
   def createActorPool : Executor = {

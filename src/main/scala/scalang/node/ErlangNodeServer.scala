@@ -36,6 +36,7 @@ class ErlangNodeServer(node : ErlangNode, typeFactory : TypeFactory, typeEncoder
   bootstrap.setPipelineFactory(new ChannelPipelineFactory {
     def getPipeline : ChannelPipeline = {
       val pipeline = Channels.pipeline
+      pipeline.addLast("executionHandler", node.executionHandler)
       pipeline.addLast("handshakeFramer", new LengthFieldBasedFrameDecoder(Short.MaxValue, 0, 2, 0, 2))
       pipeline.addLast("handshakeDecoder", new HandshakeDecoder)
       pipeline.addLast("handshakeEncoder", new HandshakeEncoder)

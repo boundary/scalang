@@ -20,17 +20,12 @@
         <dependency>
             <groupId>org.jetlang</groupId>
             <artifactId>jetlang</artifactId>
-            <version>0.2.5</version>
+            <version>0.2.10-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.jboss.netty</groupId>
             <artifactId>netty</artifactId>
             <version>3.2.4.Final</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.5.6</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -87,6 +82,7 @@
         <sourceDirectory>src/main/scala</sourceDirectory>
         <testSourceDirectory>src/test/scala</testSourceDirectory>
 
+<<<<<<< HEAD
         <plugins>
             <plugin>
                 <groupId>org.scala-tools</groupId>
@@ -130,6 +126,69 @@
                     <scalaVersion>${scala.version}</scalaVersion>
                 </configuration>
             </plugin>
+=======
+    <plugins>
+      <plugin>
+        <groupId>org.scala-tools</groupId>
+        <artifactId>maven-scala-plugin</artifactId>
+        <version>2.15.2</version>
+        <executions>
+          <execution>
+            <id>cmain</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <args>
+                <arg>-make:transitive</arg>
+                <arg>-dependencyfile</arg>
+                <arg>${project.build.directory}/.main_scala_dependencies</arg>
+              </args>
+            </configuration>
+          </execution>
+          <execution>
+            <id>ctest</id>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+            <configuration>
+              <args>
+                <arg>-make:transitive</arg>
+                <arg>-dependencyfile</arg>
+                <arg>${project.build.directory}/.test_scala_dependencies</arg>
+              </args>
+            </configuration>
+          </execution>
+        </executions>
+	      <configuration>
+          <args>
+            <arg>-optimise</arg>
+            <arg>-unchecked</arg>
+            <arg>-deprecation</arg>
+          </args>
+          <charset>UTF-8</charset>
+          <scalaVersion>${scala.version}</scalaVersion>
+          <launchers>
+            <launcher>
+              <id>loadgen</id>
+              <mainClass>scalang.LoadGen</mainClass>
+              <args>
+                <arg>server</arg>
+              </args>
+              <jvmArgs>
+                <jvmArg>-Xmx1G</jvmArg>
+                <jvmArg>-Xms1G</jvmArg>
+                <jvmArg>-Dcom.sun.management.jmxremote.port=8083</jvmArg>
+                <jvmArg>-Dcom.sun.management.jmxremote.ssl=false</jvmArg>
+                <jvmArg>-Dcom.sun.management.jmxremote.authenticate=false</jvmArg>
+                <jvmArg>-Djava.rmi.server.hostname=localhost</jvmArg>
+                <jvmArg>-agentpath:/Users/cliff/Downloads/YourKit_Java_Profiler_10.0.6.app/bin/mac/libyjpagent.jnilib</jvmArg>
+              </jvmArgs>
+            </launcher>
+          </launchers>
+        </configuration>
+      </plugin>
+>>>>>>> backpressure
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

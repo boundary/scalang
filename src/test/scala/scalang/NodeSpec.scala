@@ -219,5 +219,24 @@ class NodeSpec extends SpecificationWithJUnit {
        node.isAlive(monitorProc) must ==(true)
    }
 
+     "deliver local monitor exit for unregistered process" in {
+       node = Node(Symbol("scala@localhost"), cookie)
+       val mbox = node.spawnMbox
+       val ref = mbox.monitor('foo)
+       Thread.sleep(100)
+       mbox.receive must ==('DOWN, ref, 'process, 'foo, 'noproc)
+     }
+
+     "deliver remote monitor exit for unregistered process" in {
+       node = Node(Symbol("scala@localhost"), cookie)
+       val mbox = node.spawnMbox('mbox)
+       val scala = node.spawnMbox('scala)
+       erl = Escript("monitor.escript")
+       val remotePid = mbox.receive.asInstanceOf[Pid]
+       node.send(remotePid, ('monitor, 'foo))
+       val remoteRef = scala.receive.asInstanceOf[Reference]
+       scala.receive must ==(('down, 'noproc))
+     }
+
   }
 }

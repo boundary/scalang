@@ -795,12 +795,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     case pid : Pid =>
       pid.node == name
     case regName : Symbol =>
-      whereis(regName) match {
-        case Some(pid : Pid) =>
-          pid.node == name
-        case None =>
-          false
-      }
+      true
     case (regName : Symbol, node : Symbol) =>
       node == name
   }

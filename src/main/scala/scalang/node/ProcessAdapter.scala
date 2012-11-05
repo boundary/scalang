@@ -145,8 +145,13 @@ trait ProcessAdapter extends ExitListenable with SendListenable with LinkListena
 
   def monitor(monitored : Any) : Reference = {
     val m = Monitor(self, monitored, makeRef)
-    for (listener <- monitorListeners) {
-      listener.deliverMonitor(m)
+    state match {
+      case 'dead =>
+        m.monitorExit('noproc)
+      case 'alive =>
+        for (listener <- monitorListeners) {
+          listener.deliverMonitor(m)
+        }
     }
     m.ref
   }
@@ -155,18 +160,20 @@ trait ProcessAdapter extends ExitListenable with SendListenable with LinkListena
     monitors.remove(ref)
   }
   
-  def registerMonitor(monitoring : Pid, ref : Reference): Monitor = {
-    registerMonitor(Monitor(monitoring, self, ref))
-  }
-
-  private def registerMonitor(m : Monitor): Monitor = {
-    for (listener <- monitorListeners) {
-      m.addMonitorListener(listener)
+  def registerMonitor(monitoring : Pid, ref : Reference) : Monitor = {
+    val m = Monitor(monitoring, self, ref)
+    state match {
+      case 'dead =>
+        m.monitorExit('noproc)
+      case 'alive =>
+        for (listener <- monitorListeners) {
+          m.addMonitorListener(listener)
+        }
+        monitors.put(m.ref, m)
     }
-    monitors.put(m.ref, m)
     m
   }
-  
+
   def makeRef = referenceCounter.makeRef
   
   def sendEvery(pid : Pid, msg : Any, delay : Long) {

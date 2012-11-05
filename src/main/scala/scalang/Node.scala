@@ -174,7 +174,7 @@ trait Node extends ClusterListener with ClusterPublisher {
   def ping(node : Symbol, timeout : Long) : Boolean
   def nodes : Set[Symbol]
   def makeRef : Reference
-  def isAlive(pid : Pid) : Boolean
+  def isAlive(pidOrProc : Any) : Boolean
   def shutdown
   def timer : HashedWheelTimer
 }
@@ -558,8 +558,11 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
 
     if (isLocal(monitored)) {
-      for (p <- process(monitored)) {
-        p.registerMonitor(monitoring, ref)
+      process(monitored) match {
+        case Some(p : ProcessAdapter) =>
+          p.registerMonitor(monitoring, ref)
+        case None =>
+          monitorExit(monitor, 'noproc)
       }
     } else {
       getOrConnectAndSend(nodeOf(monitored), MonitorMessage(monitoring, monitored, ref), { channel =>
@@ -580,6 +583,13 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       log.warn("Try to monitor between non-local pids: %s -> %s", monitoring, monitored)
       return
     }
+
+    if (!isAlive(monitored)) {
+      val monitor = Monitor(monitoring, monitored, ref)
+      monitorExit(monitor, 'noproc)
+      return
+    }
+
     log.debug("pids %s", processes.keys.toList)
     process(monitored) match {
       case Some(p) =>
@@ -797,12 +807,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     case pid : Pid =>
       pid.node == name
     case regName : Symbol =>
-      whereis(regName) match {
-        case Some(pid : Pid) =>
-          pid.node == name
-        case None =>
-          false
-      }
+      true
     case (regName : Symbol, node : Symbol) =>
       node == name
   }
@@ -901,8 +906,8 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
   }
 
-  def isAlive(pid : Pid) : Boolean = {
-    process(pid) match {
+  def isAlive(pidOrProc : Any) : Boolean = {
+    process(pidOrProc) match {
       case Some(_) => true
       case None => false
     }

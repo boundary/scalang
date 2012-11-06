@@ -111,14 +111,16 @@ trait ProcessAdapter extends ExitListenable with SendListenable with LinkListena
   def exit(reason : Any) {
     if (state != 'alive) return
     state = 'dead
+
+    // Exit listeners first, so that process is removed from table.
+    for(e <- exitListeners) {
+      e.handleExit(self, reason)
+    }
     for (link <- links) {
       link.break(reason)
     }
     for (m <- monitors.values) {
       m.monitorExit(reason)
-    }
-    for(e <- exitListeners) {
-      e.handleExit(self, reason)
     }
     cleanup
   }

@@ -95,7 +95,7 @@ abstract class ProcessHolder(ctx : ProcessContext) extends ProcessAdapter {
 }
 
 trait ProcessAdapter extends ExitListenable with SendListenable with LinkListenable with MonitorListenable with Instrumented with Logging {
-  @volatile var state = 'alive
+  var state = 'alive
   def self : Pid
   def fiber : Fiber
   def referenceCounter : ReferenceCounter
@@ -109,16 +109,20 @@ trait ProcessAdapter extends ExitListenable with SendListenable with LinkListena
   def handleMonitorExit(monitored : Any, ref : Reference, reason : Any)
   
   def exit(reason : Any) {
-    if (state != 'alive) return
-    state = 'dead
+    synchronized {
+      if (state != 'alive) return
+      state = 'dead
+    }
+
+    // Exit listeners first, so that process is removed from table.
+    for(e <- exitListeners) {
+      e.handleExit(self, reason)
+    }
     for (link <- links) {
       link.break(reason)
     }
     for (m <- monitors.values) {
       m.monitorExit(reason)
-    }
-    for(e <- exitListeners) {
-      e.handleExit(self, reason)
     }
     cleanup
   }
@@ -163,7 +167,12 @@ trait ProcessAdapter extends ExitListenable with SendListenable with LinkListena
     for (listener <- monitorListeners) {
       m.addMonitorListener(listener)
     }
-    monitors.put(m.ref, m)
+    synchronized {
+      if (state != 'alive)
+        m.monitorExit('noproc)
+      else
+        monitors.put(m.ref, m)
+    }
     m
   }
   

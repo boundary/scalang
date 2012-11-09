@@ -143,7 +143,12 @@ trait ProcessAdapter extends ExitListenable with SendListenable with LinkListena
     for (listener <- linkListeners) {
       l.addLinkListener(listener)
     }
-    links.add(l)
+    synchronized {
+      if (state != 'alive)
+        l.break('noproc)
+      else
+        links.add(l)
+    }
     l
   }
 

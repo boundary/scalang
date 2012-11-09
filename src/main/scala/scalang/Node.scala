@@ -480,8 +480,11 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     }
 
     if (isLocal(to)) {
-      for (p <- process(to)) {
-        p.registerLink(from)
+      process(to) match {
+        case Some(p : ProcessAdapter) =>
+          p.registerLink(from)
+        case None =>
+          break(link, 'noproc)
       }
     } else {
       getOrConnectAndSend(to.node, LinkMessage(from, to), { channel =>
@@ -531,8 +534,13 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         if (!isLocal(from))
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
       case None =>
-        if (!isLocal(from))
+        if (isLocal(from)) {
+          log.warn("Try to link non-live process %s to %s", from, to)
+          val link = Link(from, to)
+          break(link, 'noproc)
+        } else {
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
+        }
     }
 
     process(to) match {
@@ -542,8 +550,13 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
 
       case None =>
-        if (!isLocal(to))
+        if (isLocal(to)) {
+          log.warn("Try to link non-live process %s to %s", to, from)
+          val link = Link(from, to)
+          break(link, 'noproc)
+        } else {
           links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
+        }
     }
   }
 
@@ -775,6 +788,13 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       }
     } else {
       getOrConnectAndSend(to.node, ExitMessage(from,to,reason))
+    }
+    if (isLocal(from)) {
+      for (proc <- process(from)) {
+        proc.handleExit(to, reason)
+      }
+    } else {
+      getOrConnectAndSend(from.node, ExitMessage(to,from,reason))
     }
   }
 

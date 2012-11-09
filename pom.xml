@@ -5,7 +5,7 @@
     <name>scalang</name>
     <artifactId>scalang-scala_2.9.1</artifactId>
     <packaging>jar</packaging>
-    <version>0.23</version>
+    <version>0.23-SNAPSHOT</version>
     <properties>
         <scala.version>2.9.1</scala.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

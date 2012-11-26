@@ -42,7 +42,7 @@ abstract class ProcessHolder(ctx : ProcessContext) extends ProcessAdapter {
         } catch {
           case e : Throwable =>
             log.error(e, "An error occurred in actor %s", process)
-            exit(e.getMessage)
+            process.exit(e.getMessage)
         }
       }
     }
@@ -56,7 +56,7 @@ abstract class ProcessHolder(ctx : ProcessContext) extends ProcessAdapter {
       } catch {
         case e : Throwable =>
           log.error(e, "An error occurred during handleExit in actor %s", this)
-          exit(e.getMessage)
+          process.exit(e.getMessage)
       }
     }
   })
@@ -69,7 +69,7 @@ abstract class ProcessHolder(ctx : ProcessContext) extends ProcessAdapter {
       } catch {
         case e : Throwable =>
           log.error(e, "An error occurred during handleMonitorExit in actor %s", this)
-          exit(e.getMessage)
+          process.exit(e.getMessage)
       }
     }
   })

@@ -71,7 +71,7 @@ class ErlangHandler(
   }
 
   override def channelDisconnected(ctx : ChannelHandlerContext, e : ChannelStateEvent) {
-    log.debug("channel disconnected %s %s. peer: %s", ctx, e, peer)
+    log.info("channel disconnected %s %s. peer: %s", ctx, e, peer)
     if (peer != null) {
       node.disconnected(peer, e.getChannel)
     }

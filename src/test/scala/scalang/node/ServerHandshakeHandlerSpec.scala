@@ -1,7 +1,10 @@
 package scalang.node
 
+import scalang._
 import org.specs._
 import org.specs.runner._
+import org.specs.mock.Mockito
+import org.mockito.Matchers._
 import scalang.util._
 import org.jboss.{netty => netty}
 import netty.buffer._
@@ -10,14 +13,17 @@ import ChannelBuffers._
 import java.security.MessageDigest
 import netty.handler.codec.embedder.TwoWayCodecEmbedder
 
-class ServerHandshakeHandlerSpec extends SpecificationWithJUnit {
+class ServerHandshakeHandlerSpec extends SpecificationWithJUnit with Mockito {
   val cookie = "DRSJLFJLGIYPEAVFYFCY"
+  val nodeName = Symbol("tmp@blah")
 
   "ServerHandshakeHandler" should {
     "complete a standard handshake" in {
-      val handshake = new ServerHandshakeHandler(Symbol("tmp@blah"), cookie, { (peer : Symbol, p : ChannelPipeline) =>
-
-      })
+      val node = mock[ErlangNode]
+      node.cookie returns cookie
+      node.name returns nodeName
+      node.registerConnection(any[Symbol],any[ChannelFuture],any[Channel]) returns 'ok
+      val handshake = new ServerHandshakeHandler(node)
       val embedder = new TwoWayCodecEmbedder[Any](handshake)
       embedder.upstreamMessage(NameMessage(5, 32765, "tmp@moonpolysoft.local"))
       val status = embedder.poll

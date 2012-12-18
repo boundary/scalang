@@ -42,6 +42,7 @@ import org.jboss.netty.logging._
 import netty.util.HashedWheelTimer
 import com.yammer.metrics.scala._
 import java.nio.channels.ClosedChannelException
+import util.Hostname
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
@@ -195,9 +196,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   var creation : Int = 0
   val processes = new NonBlockingHashMap[Pid,ProcessAdapter]
   val registeredNames = new NonBlockingHashMap[Symbol,Pid]
-  val channels = AtomicMap.atomicNBHM[Symbol,Channel]
-  val links = AtomicMap.atomicNBHM[Channel,NonBlockingHashSet[Link]]
-  val monitors = AtomicMap.atomicNBHM[Channel,NonBlockingHashSet[Monitor]]
+  val connections = AtomicMap.atomicNBHM[Symbol,ErlangConnection]
   val pidCount = new AtomicInteger(0)
   val pidSerial = new AtomicInteger(0)
   val executor = poolFactory.createActorPool
@@ -205,7 +204,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   val executionHandler = new ExecutionHandler(poolFactory.createExecutorPool)
   val server = new ErlangNodeServer(this,config.typeFactory, config.typeEncoder)
   val localEpmd = Epmd("localhost")
-  localEpmd.alive(server.port, splitNodename(name)) match {
+  localEpmd.alive(server.port, Hostname.splitNodename(name)) match {
     case Some(c) => creation = c
     case None => throw new ErlangNodeException("EPMD alive announcement failed.")
   }
@@ -215,7 +214,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
 
   def shutdown {
     localEpmd.close
-    for ((node,channel) <- channels) {
+    for ((node,channel) <- connections) {
       channel.close
     }
     for((pid,process) <- processes) {
@@ -445,8 +444,14 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     registeredNames.keySet.toSet.asInstanceOf[Set[Symbol]]
   }
 
-  def registerConnection(name : Symbol, channel : Channel) {
-    channels.put(name, channel)
+  def forceConnection(name : Symbol, channel : Channel) : Boolean = {
+    val connection = connections(name)
+    connection.forceConnection(channel)
+  }
+
+  def registerConnection(name : Symbol, handshakeFuture : ChannelFuture, channel : Channel) : Symbol = {
+    val connection = connections.getOrElseUpdate(name, new ErlangConnection(this, name, config))
+    connection.connectRequested(handshakeFuture, channel)
   }
 
   def whereis(regName : Symbol) : Option[Pid] = {
@@ -467,7 +472,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
 
   def nodes : Set[Symbol] = {
-    channels.keySet.toSet.asInstanceOf[Set[Symbol]]
+    connections.keySet.toSet.asInstanceOf[Set[Symbol]]
   }
 
   def deliverLink(link : Link) {
@@ -484,9 +489,16 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         p.registerLink(from)
       }
     } else {
-      getOrConnectAndSend(to.node, LinkMessage(from, to), { channel =>
-        val set = links.getOrElseUpdate(channel, new NonBlockingHashSet[Link])
-        set.add(link)
+      // links need to break with a noconnection if it's boned
+      val (future, connection) = lazyConnectAndSend(to.node, LinkMessage(from, to))
+      future.addListener(new ChannelFutureListener {
+        def operationComplete(future : ChannelFuture) {
+          if (future.isSuccess) {
+            connection.addLink(link)
+          } else {
+            link.localBreak('noconnection)
+          }
+        }
       })
     }
   }
@@ -513,7 +525,8 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   }
 
   // Link two pids without triggering a send of a Link message to the remote.
-  def linkWithoutNotify(from : Pid, to : Pid, channel: Channel) {
+  def linkWithoutNotify(from : Pid, to : Pid, peer : Symbol) {
+    val connection = connections(peer)
     log.debug("link w/o notify %s -> %s", from, to)
     if (from == to) {
       log.warn("Trying to link a pid to itself: %s", from)
@@ -529,21 +542,20 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       case Some(p : ProcessAdapter) =>
         val link = p.registerLink(to)
         if (!isLocal(from))
-          links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
+          connection.addLink(link)
       case None =>
         if (!isLocal(from))
-          links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
+          connection.addLink(Link(from, to))
     }
 
     process(to) match {
       case Some(p : ProcessAdapter) =>
         val link = p.registerLink(from)
         if (!isLocal(to))
-          links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(link)
-
+          connection.addLink(link)
       case None =>
         if (!isLocal(to))
-          links.getOrElseUpdate(channel, new NonBlockingHashSet[Link]).add(Link(from, to))
+          connection.addLink(Link(from, to))
     }
   }
 
@@ -565,14 +577,20 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
           monitorExit(monitor, 'noproc)
       }
     } else {
-      getOrConnectAndSend(nodeOf(monitored), MonitorMessage(monitoring, monitored, ref), { channel =>
-        val set = monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor])
-        set.add(monitor)
+      val (future, connection) = lazyConnectAndSend(nodeOf(monitored), MonitorMessage(monitoring, monitored, ref))
+      future.addListener(new ChannelFutureListener {
+        def operationComplete(future : ChannelFuture) {
+          if (future.isSuccess) {
+            connection.addMonitor(monitor)
+          } else {
+            monitorExit(monitor, 'noconnection)
+          }
+        }
       })
     }
   }
 
-  def monitorWithoutNotify(monitoring : Pid, monitored : Any, ref : Reference, channel : Channel) {
+  def monitorWithoutNotify(monitoring : Pid, monitored : Any, ref : Reference, peer : Symbol) {
     log.debug("monitor %s -> %s (%s)", monitoring, monitored, ref)
     if (monitoring == monitored) {
       log.warn("Trying to monitor itself: %s", monitoring)
@@ -590,14 +608,14 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         log.debug("adding monitor for %s", p)
         val monitor = p.registerMonitor(monitoring, ref)
         if (!isLocal(monitored))
-          monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor]).add(monitor)
+          connections(peer).addMonitor(monitor)
       case None =>
         if (isLocal(monitored)) {
           log.warn("Try to monitor non-live process: %s -> %s (%s)", monitoring, monitored, ref)
           val monitor = Monitor(monitoring, monitored, ref)
           monitorExit(monitor, 'noproc)
         } else {
-          monitors.getOrElseUpdate(channel, new NonBlockingHashSet[Monitor]).add(Monitor(monitoring, monitored, ref))
+          connections(peer).addMonitor(Monitor(monitoring, monitored, ref))
         }
     }
   }
@@ -622,7 +640,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         proc.handleMonitorExit(monitored, ref, reason)
       }
     } else {
-      getOrConnectAndSend(monitoring.node, MonitorExitMessage(monitored, monitoring, ref, reason))
+      lazyConnectAndSend(monitoring.node, MonitorExitMessage(monitored, monitoring, ref, reason))
     }
   }
 
@@ -710,7 +728,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       } else {
         log.debug("send remote to %s", to.node)
         try {
-          getOrConnectAndSend(to.node, SendMessage(to, msg))
+          lazyConnectAndSend(to.node, SendMessage(to, msg))
         } catch {
           case e : Exception =>
             log.warn(e, "trouble sending message to %s", to.node)
@@ -732,7 +750,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   def handleSend(dest : (Symbol,Symbol), from : Pid, msg : Any) {
     val (regName,peer) = dest
     try {
-      getOrConnectAndSend(peer, RegSend(from, regName, msg))
+      lazyConnectAndSend(peer, RegSend(from, regName, msg))
     } catch {
       case e : Exception =>
         log.warn(e, "trouble sending message to %s", peer)
@@ -750,9 +768,12 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     processes.remove(from)
   }
 
+  def localBreak(link : Link, reason : Any) {
+    remoteBreak(link, reason)
+  }
+
   //this only gets called from a remote link breakage()
   def remoteBreak(link : Link, reason : Any) {
-
     val from = link.from
     val to = link.to
     for (proc <- process(to)) {
@@ -774,7 +795,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
         proc.handleExit(from, reason)
       }
     } else {
-      getOrConnectAndSend(to.node, ExitMessage(from,to,reason))
+      lazyConnectAndSend(to.node, ExitMessage(from,to,reason))
     }
   }
 
@@ -820,80 +841,23 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
       node
   }
 
-  def disconnected(peer : Symbol, channel: Channel) {
-    if (channels.containsKey(peer)) {
-      channels.remove(peer)
-      //must break all links here
-      if (links.contains(channel)) {
-        val setOption = links.remove(channel)
-        for (set <- setOption; link <- set) {
-          remoteBreak(link, 'noconnection)
-        }
-      }
-      //must send all monitor exits too
-      if (monitors.contains(channel)) {
-        val setOption = monitors.remove(channel)
-        for (set <- setOption; monitor <- set) {
-          remoteMonitorExit(monitor, 'noconnection)
-        }
-      }
+  def disconnected(peer : Symbol, channel : Channel) {
+    for (conn <- connections.get(peer)) {
+      conn.disconnected(channel)
     }
   }
 
-  def getOrConnectAndSend(peer : Symbol, msg : Any, afterHandshake : Channel => Unit = { channel => Unit }) {
-    log.debug("node %s sending %s", this, msg)
-    val channel = channels.getOrElseUpdate(peer, {
-      connectAndSend(peer, None)
+  protected def lazyConnectAndSend(peer : Symbol, msg : Any) : (ChannelFuture,ErlangConnection) = {
+    val connection = connections.getOrElseUpdate(peer, {
+      createConnection(peer)
     })
-    channel.write(msg)
-
-/*    if (channel.isOpen) {
-      channel.write(msg)
-    } else {
-      channels.remove(peer, channel)
-      channel.close()
-      channels.getOrElseUpdate(peer, { connectAndSend(peer, None) }).write(msg)
-    }
-*/
-    afterHandshake(channel)
+    (connection.write(msg),connection)
   }
-
-  def connectAndSend(peer : Symbol, msg : Option[Any] = None, afterHandshake : Channel => Unit = {_ => Unit }) : Channel = {
-    val hostname = splitHostname(peer).getOrElse(throw new ErlangNodeException("Cannot resolve peer with no hostname: " + peer.name))
-    val peerName = splitNodename(peer)
-    val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
-    val client = new ErlangNodeClient(this, peer, hostname, port, msg, config.typeFactory,
-      config.typeEncoder, afterHandshake)
-    client.channel
-  }
-
-  def posthandshake : (Symbol,ChannelPipeline) => Unit = {
-    { (peer : Symbol, p : ChannelPipeline) =>
-      p.addFirst("packetCounter", new PacketCounter("stream-" + peer.name))
-      if (p.get("encoderFramer") != null)
-        p.addAfter("encoderFramer", "framedCounter", new PacketCounter("framed-" + peer.name))
-      if (p.get("erlangEncoder") != null)
-        p.addAfter("erlangEncoder", "erlangCounter", new PacketCounter("erlang-" + peer.name))
-      p.addAfter("erlangCounter", "failureDetector", new FailureDetectionHandler(name, new SystemClock, tickTime, timer))
-    }
-  }
-
-  def splitNodename(peer : Symbol) : String = {
-    val parts = peer.name.split('@')
-    if (parts.length < 2) {
-      peer.name
-    } else {
-      parts(0)
-    }
-  }
-
-  def splitHostname(peer : Symbol) : Option[String] = {
-    val parts = peer.name.split('@')
-    if (parts.length < 2) {
-      None
-    } else {
-      Some(parts(1))
-    }
+  
+  def createConnection(peer : Symbol) : ErlangConnection = {
+    val connection = new ErlangConnection(this, peer, config)
+    connection.connect
+    connection
   }
 
   def isAlive(pidOrProc : Any) : Boolean = {

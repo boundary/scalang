@@ -2,8 +2,14 @@
 %%! -smp enable -sname test@localhost -setcookie test
 
 main([]) ->
-    {mbox,scala@localhost} ! self(),
-    loop().
+    spawn(fun() ->
+      {mbox,scala@localhost} ! self(),
+      loop()
+    end),
+    receive
+    after 5000 ->
+      ok
+    end.
 
 loop() ->
     receive
@@ -20,7 +26,7 @@ loop() ->
             loop();
         {exit, Reason} ->
             exit({exit, Reason})
-    after 2000 ->
+    after 3000 ->
             respond(timeout)
     end.
 

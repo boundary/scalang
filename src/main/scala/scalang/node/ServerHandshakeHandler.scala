@@ -30,7 +30,10 @@ import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 
-class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Symbol,ChannelPipeline) => Unit) extends HandshakeHandler(posthandshake) {
+class ServerHandshakeHandler(node : ErlangNode) extends HandshakeHandler(node) {
+  val name = node.name
+  val cookie = node.cookie
+  
   states(
     state('disconnected, {
       case ConnectedMessage => 'connected
@@ -38,10 +41,28 @@ class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
 
     state('connected, {
       case msg : NameMessage =>
-        receiveName(msg)
-        sendStatus
+        val status = receiveName(msg)
+        sendStatus(status)
+        status match {
+          case 'ok =>
+            sendChallenge
+            'challenge_sent
+          case 'ok_simultaneous =>
+            handshakeFailed
+            'disconnected
+          case 'alive =>
+            'alive
+        }
+    }),
+
+    state('alive, {
+      case StatusMessage("true") =>
+        forcePeer(ctx.getChannel)
         sendChallenge
         'challenge_sent
+      case StatusMessage("false") =>
+        handshakeFailed
+        'disconnected
     }),
 
     state('challenge_sent, {
@@ -56,14 +77,14 @@ class ServerHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Sy
     state('verified, { case _ => 'verified}))
 
   //state machine callbacks
-  protected def receiveName(msg : NameMessage) {
-    peer = Symbol(msg.name)
+  protected def receiveName(msg : NameMessage) : Symbol = {
+    setPeer(ctx.getChannel, Symbol(msg.name))
   }
 
-  protected def sendStatus {
+  protected def sendStatus(status : Symbol) {
     val channel = ctx.getChannel
     val future = Channels.future(channel)
-    ctx.sendDownstream(new DownstreamMessageEvent(channel,future,StatusMessage("ok"),null))
+    ctx.sendDownstream(new DownstreamMessageEvent(channel,future,StatusMessage(status.name),null))
   }
 
   protected def sendChallenge {

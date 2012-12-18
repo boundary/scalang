@@ -1,22 +1,26 @@
 package scalang.node
 
+import scalang._
 import org.specs._
 import org.specs.runner._
+import org.specs.mock.Mockito
+import org.mockito.Matchers._
 import org.jboss.{netty => netty}
 import netty.buffer._
 import netty.channel._
 import java.security.MessageDigest
 import netty.handler.codec.embedder.TwoWayCodecEmbedder
 
-class ClientHandshakeHandlerSpec extends SpecificationWithJUnit {
+class ClientHandshakeHandlerSpec extends SpecificationWithJUnit with Mockito {
   val cookie = "DRSJLFJLGIYPEAVFYFCY"
-  val node = Symbol("tmp@moonpolysoft.local")
+  val nodeName = Symbol("tmp@moonpolysoft.local")
 
   "ClientHandshakeHandler" should {
     "complete a standard handshake" in {
-      val handshake = new ClientHandshakeHandler(node, cookie, { (peer : Symbol, p : ChannelPipeline) =>
-
-      })
+      val node = mock[ErlangNode]
+      node.cookie returns cookie
+      node.name returns nodeName
+      val handshake = new ClientHandshakeHandler(Symbol("tmp@blah"), node)
       val embedder = new TwoWayCodecEmbedder[Any](handshake)
       val nameMsg = embedder.poll
       nameMsg must beLike { case NameMessage(5, _, node) => true }

@@ -21,4 +21,8 @@ case class Link(from : Pid, to : Pid) extends LinkListenable {
   def break(reason : Any) {
     notifyBreak(this, reason)
   }
+  
+  def localBreak(reason : Any) {
+    notifyLocalBreak(this, reason)
+  }
 }

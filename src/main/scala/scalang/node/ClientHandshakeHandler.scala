@@ -30,10 +30,14 @@ import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 
-class ClientHandshakeHandler(name : Symbol, cookie : String, posthandshake : (Symbol,ChannelPipeline) => Unit) extends HandshakeHandler(posthandshake) {
+class ClientHandshakeHandler(p : Symbol, node : ErlangNode) extends HandshakeHandler(node) {
+  val name = node.name
+  val cookie = node.cookie
+  
   states(
     state('disconnected, {
       case ConnectedMessage =>
+        setPeer(ctx.getChannel, p)
         sendName
         'connected
     }),

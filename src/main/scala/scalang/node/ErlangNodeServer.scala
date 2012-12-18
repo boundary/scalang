@@ -40,7 +40,7 @@ class ErlangNodeServer(node : ErlangNode, typeFactory : TypeFactory, typeEncoder
       pipeline.addLast("handshakeFramer", new LengthFieldBasedFrameDecoder(Short.MaxValue, 0, 2, 0, 2))
       pipeline.addLast("handshakeDecoder", new HandshakeDecoder)
       pipeline.addLast("handshakeEncoder", new HandshakeEncoder)
-      pipeline.addLast("handshakeHandler", new ServerHandshakeHandler(node.name, node.cookie, node.posthandshake))
+      pipeline.addLast("handshakeHandler", new ServerHandshakeHandler(node))
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
       pipeline.addLast("erlangDecoder", new ScalaTermDecoder('server, typeFactory))

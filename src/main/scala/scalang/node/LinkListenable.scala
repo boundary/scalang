@@ -29,6 +29,12 @@ trait LinkListenable {
       listener.break(link, reason)
     }
   }
+  
+  def notifyLocalBreak(link : Link, reason : Any) {
+    for (listener <- linkListeners) {
+      listener.localBreak(link, reason)
+    }
+  }
 
   def notifyDeliverLink(link : Link) {
     for (listener <- linkListeners) {

@@ -31,17 +31,28 @@ import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
 import com.codahale.logula.Logging
 
-abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit) extends SimpleChannelHandler with StateMachine with Logging {
+abstract class HandshakeHandler(node : ErlangNode) extends SimpleChannelHandler with StateMachine with Logging {
   override val start = 'disconnected
   @volatile var ctx : ChannelHandlerContext = null
   @volatile var peer : Symbol = null
   @volatile var challenge : Int = 0
   @volatile var peerChallenge : Int = 0
+  @volatile var handshakeFuture : ChannelFuture = null
 
   val messages = new ArrayDeque[MessageEvent]
   val random = SecureRandom.getInstance("SHA1PRNG")
 
   def isVerified = currentState == 'verified
+
+  def forcePeer(channel : Channel) {
+    node.forceConnection(peer, channel)
+  }
+
+  def setPeer(channel : Channel, p : Symbol) : Symbol = {
+    peer = p
+    handshakeFuture = Channels.future(channel, true)
+    node.registerConnection(peer, handshakeFuture, channel)
+  }
 
   //handler callbacks
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
@@ -118,7 +129,6 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
     for (name <- List("handshakeFramer", "handshakeDecoder", "handshakeEncoder", "handshakeHandler"); if keys.contains(name)) {
       p.remove(name)
     }
-    posthandshake(peer,p)
 
     for (msg <- messages) {
       ctx.sendDownstream(msg)
@@ -128,10 +138,12 @@ abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit
 
   protected def handshakeSucceeded {
     ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeSucceeded(peer, ctx.getChannel), null))
+    handshakeFuture.setSuccess
   }
 
   protected def handshakeFailed {
     ctx.getChannel.close
     ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel, HandshakeFailed(peer), null))
+    handshakeFuture.setFailure(new ChannelException)
   }
 }

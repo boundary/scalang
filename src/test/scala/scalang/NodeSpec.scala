@@ -33,7 +33,7 @@ class NodeSpec extends SpecificationWithJUnit {
       erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_kernel:connect_node('test@localhost')])."))
       val read = new BufferedReader(new InputStreamReader(erl.getInputStream))
       read.readLine
-      node.channels.keySet.toSet must contain(Symbol("tmp@localhost"))
+      node.connections.keySet.toSet must contain(Symbol("tmp@localhost"))
     }
 
     "connect to a remote node" in {
@@ -41,10 +41,10 @@ class NodeSpec extends SpecificationWithJUnit {
       erl = Escript("receive_connection.escript")
       ReadLine(erl) //ready
       val pid = node.createPid
-      node.connectAndSend(Symbol("test@localhost"), None)
+      node.createConnection(Symbol("test@localhost"))
       val result = ReadLine(erl)
       result must ==("scala@localhost")
-      node.channels.keySet.toSet must contain(Symbol("test@localhost"))
+      node.connections.keySet.toSet must contain(Symbol("test@localhost"))
     }
 
     "accept pings" in {
@@ -52,7 +52,7 @@ class NodeSpec extends SpecificationWithJUnit {
       erl = ErlangVM("tmp@localhost", cookie, Some("io:format(\"~p~n\", [net_adm:ping('scala@localhost')])."))
       val result = ReadLine(erl)
       result must ==("pong")
-      node.channels.keySet.toSet must contain(Symbol("tmp@localhost"))
+      node.connections.keySet.toSet must contain(Symbol("tmp@localhost"))
     }
 
     "send pings" in {
@@ -139,7 +139,6 @@ class NodeSpec extends SpecificationWithJUnit {
     }
 
     "deliver breaks on channel disconnect" in {
-       println("discon")
        node = Node(Symbol("scala@localhost"), cookie)
        val mbox = node.spawnMbox('mbox)
        erl = Escript("link_delivery.escript")
@@ -213,7 +212,7 @@ class NodeSpec extends SpecificationWithJUnit {
        node.send(monitorProc, (remotePid, mbox.self))
        Thread.sleep(100)
        mbox.receive must ==('ok)
-       node.send(monitorProc, ('exit, 'blah))
+       node.send(remotePid, ('exit, 'blah))
        Thread.sleep(100)
        mbox.receive must ==('monitor_exit)
        node.isAlive(monitorProc) must ==(true)

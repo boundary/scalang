@@ -21,4 +21,6 @@ trait LinkListener {
   def deliverLink(link : Link)
 
   def break(link : Link, reason : Any)
+  
+  def localBreak(link : Link, reason : Any)
 }

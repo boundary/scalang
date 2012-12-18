@@ -25,8 +25,7 @@ import scalang._
 import com.codahale.logula.Logging
 
 class ErlangHandler(
-    node : ErlangNode,
-    afterHandshake : Channel => Unit = { _ => Unit }) extends SimpleChannelUpstreamHandler with Logging {
+    node : ErlangNode) extends SimpleChannelUpstreamHandler with Logging {
 
   @volatile var peer : Symbol = null
 
@@ -46,11 +45,11 @@ class ErlangHandler(
         ctx.getChannel.close
       case HandshakeSucceeded(name, channel) =>
         peer = name
-        node.registerConnection(name, channel)
-        afterHandshake(channel)
+/*        node.finalizeConnection(peer, channel)
+*//*        node.registerConnection(name, channel)*/
       case LinkMessage(from, to) =>
         log.debug("received link request from %s.", from)
-        node.linkWithoutNotify(from, to, e.getChannel)
+        node.linkWithoutNotify(from, to, peer)
       case SendMessage(to, msg) =>
         node.handleSend(to, msg)
       case ExitMessage(from, to, reason) =>
@@ -62,7 +61,7 @@ class ErlangHandler(
       case RegSend(from, to, msg) =>
         node.handleSend(to, msg)
       case MonitorMessage(monitoring, monitored, ref) =>
-        node.monitorWithoutNotify(monitoring, monitored, ref, e.getChannel)
+        node.monitorWithoutNotify(monitoring, monitored, ref, peer)
       case DemonitorMessage(monitoring, monitored, ref) =>
         node.demonitor(monitoring, monitored, ref)
       case MonitorExitMessage(monitored, monitoring, ref, reason) =>

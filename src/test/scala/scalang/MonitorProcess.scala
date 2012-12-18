@@ -9,7 +9,7 @@ class MonitorProcess(ctx : ProcessContext) extends Process(ctx) {
       this.sendTo = sendTo
       sendTo ! 'ok
     case ('exit, msg : Any) =>
-      'ok
+      exit(msg)
     case ('timeout) =>
       'ok
   }

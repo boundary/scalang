@@ -32,8 +32,7 @@ class ErlangNodeClient(
     port : Int,
     control : Option[Any],
     typeFactory : TypeFactory,
-    typeEncoder : TypeEncoder,
-    afterHandshake : Channel => Unit) extends Logging
+    typeEncoder : TypeEncoder) extends Logging
 {
   val bootstrap = new ClientBootstrap(
     new NioClientSocketChannelFactory(
@@ -49,12 +48,12 @@ class ErlangNodeClient(
       pipeline.addLast("handshakeFramer", new LengthFieldBasedFrameDecoder(Short.MaxValue, 0, 2, 0, 2))
       pipeline.addLast("handshakeDecoder", handshakeDecoder)
       pipeline.addLast("handshakeEncoder", new HandshakeEncoder)
-      pipeline.addLast("handshakeHandler", new ClientHandshakeHandler(node.name, node.cookie, node.posthandshake))
+      pipeline.addLast("handshakeHandler", new ClientHandshakeHandler(peer, node))
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
       pipeline.addLast("erlangDecoder", new ScalaTermDecoder(peer, typeFactory))
       pipeline.addLast("erlangEncoder", new ScalaTermEncoder(peer, typeEncoder))
-      pipeline.addLast("erlangHandler", new ErlangHandler(node, afterHandshake))
+      pipeline.addLast("erlangHandler", new ErlangHandler(node))
 
       pipeline
     }
@@ -69,7 +68,7 @@ class ErlangNodeClient(
           channel.write(c)
         }
       } else {
-        node.disconnected(peer, channel)
+        
       }
     }
   })

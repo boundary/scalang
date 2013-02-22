@@ -33,6 +33,7 @@ class ErlangNodeClient(
     control : Option[Any],
     typeFactory : TypeFactory,
     typeEncoder : TypeEncoder,
+    typeDecoder : TypeDecoder,
     afterHandshake : Channel => Unit) extends Logging
 {
   val bootstrap = new ClientBootstrap(
@@ -52,7 +53,7 @@ class ErlangNodeClient(
       pipeline.addLast("handshakeHandler", new ClientHandshakeHandler(node.name, node.cookie, node.posthandshake))
       pipeline.addLast("erlangFramer", new LengthFieldBasedFrameDecoder(Int.MaxValue, 0, 4, 0, 4))
       pipeline.addLast("encoderFramer", new LengthFieldPrepender(4))
-      pipeline.addLast("erlangDecoder", new ScalaTermDecoder(peer, typeFactory))
+      pipeline.addLast("erlangDecoder", new ScalaTermDecoder(peer, typeFactory, typeDecoder))
       pipeline.addLast("erlangEncoder", new ScalaTermEncoder(peer, typeEncoder))
       pipeline.addLast("erlangHandler", new ErlangHandler(node, afterHandshake))
 

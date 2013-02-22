@@ -23,6 +23,7 @@ case class NodeConfig(
   clusterListener : Option[ClusterListener] = None,
   typeFactory : TypeFactory = NoneTypeFactory,
   typeEncoder: TypeEncoder = NoneTypeEncoder,
+  typeDecoder : TypeDecoder = NoneTypeDecoder,
   tickTime : Int = 60)
 
 object NoneTypeFactory extends TypeFactory {
@@ -32,4 +33,9 @@ object NoneTypeFactory extends TypeFactory {
 object NoneTypeEncoder extends TypeEncoder {
   def unapply(obj: Any) = { None }
   def encode(obj: Any, buffer: ChannelBuffer) {}
+}
+
+object NoneTypeDecoder extends TypeDecoder {
+  def unapply(typeOrdinal : Int) : Option[Int] = { None }
+  def decode(typeOrdinal : Int, buffer : ChannelBuffer) : Any = {}
 }

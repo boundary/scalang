@@ -30,7 +30,7 @@ import scalang.util.CamelToUnder._
 import com.codahale.logula.Logging
 import com.yammer.metrics.scala._
 
-class ScalaTermEncoder(peer: Symbol, encoder: TypeEncoder) extends OneToOneEncoder with Logging with Instrumented {
+class ScalaTermEncoder(peer: Symbol, encoder: TypeEncoder = NoneTypeEncoder) extends OneToOneEncoder with Logging with Instrumented {
 
   val encodeTimer = metrics.timer("encoding", peer.name)
 

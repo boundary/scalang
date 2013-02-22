@@ -54,7 +54,7 @@ object ScalaTermDecoder {
   }
 }
 
-class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDecoder with Instrumented {
+class ScalaTermDecoder(peer : Symbol, factory : TypeFactory, decoder : TypeDecoder = NoneTypeDecoder) extends OneToOneDecoder with Instrumented {
   val decodeTimer = metrics.timer("decoding", peer.name)
 
   def decode(ctx : ChannelHandlerContext, channel : Channel, obj : Any) : Object = obj match {
@@ -103,7 +103,10 @@ class ScalaTermDecoder(peer : Symbol, factory : TypeFactory) extends OneToOneDec
   }
 
   def readTerm(buffer : ChannelBuffer) : Any = {
-    buffer.readUnsignedByte match {
+    val typeOrdinal : Int = buffer.readUnsignedByte
+    typeOrdinal match {
+      case decoder(_) =>
+        decoder.decode(typeOrdinal, buffer)
       case 131 => //version derp
         readTerm(buffer)
       case 97 => //small integer

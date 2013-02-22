@@ -28,6 +28,12 @@ trait TypeEncoder {
   def encode(obj : Any, buffer : ChannelBuffer)
 }
 
+trait TypeDecoder {
+  def unapply(typeOrdinal : Int) : Option[Int]
+
+  def decode(typeOrdinal : Int, buffer : ChannelBuffer) : Any
+}
+
 class TermReader(val buffer : ChannelBuffer, decoder : ScalaTermDecoder) {
   var m : Int = 0
 

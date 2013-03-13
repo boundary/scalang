@@ -1,11 +1,12 @@
 package scalang.epmd
 
 import org.specs._
-import org.specs.runner._
+import mock.Mockito
 import java.lang.{Process => SysProcess}
 import scalang._
+import org.jboss.netty.channel.ChannelFuture
 
-class EpmdSpec extends SpecificationWithJUnit {
+class EpmdSpec extends SpecificationWithJUnit with Mockito {
   "Epmd" should {
     var proc : SysProcess = null
     doBefore {
@@ -34,6 +35,49 @@ class EpmdSpec extends SpecificationWithJUnit {
 
       epmdPublish.close
       epmdQuery.close
+    }
+  }
+
+  "Epmd object" should {
+    "return an Epmd directly" in {
+      val noConnectConfig = new EpmdConfig("localhost", Epmd.defaultPort, connectOnInit = false)
+      val epmd = Epmd(noConnectConfig)
+      epmd.connected must(be(false))
+    }
+
+    "connect with retries" in {
+      val epmd = mock[Epmd]
+      val future = mock[ChannelFuture]
+      epmd.connect.returns(future)
+
+      // Always returns true so that it's never polled
+      future.isDone.returns(true)
+
+      // 'connected' is checked before 'future.isSuccess' since there should be a polling step
+      // that's being skipped in each test.
+      epmd.connected
+        .returns(false)
+        .thenReturns(false)
+        .thenReturns(false)
+        .thenReturns(false)
+        .thenReturns(true)
+      future.isSuccess
+        .returns(false)
+        .thenReturns(false)
+        .thenReturns(false)
+        .thenReturns(true)
+
+      val retryCfg = new EpmdConfig(
+        "localhost",
+        Epmd.defaultPort,
+        connectOnInit = true,
+        connectionTimeout = Some(1),
+        retries = Some(10),
+        retryInterval = Some(1)
+      )
+      Epmd.connectWithRetries(epmd, retryCfg)
+
+      there was 4.times(epmd).connect
     }
   }
 }

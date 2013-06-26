@@ -33,8 +33,13 @@ object ScalaTermDecoder {
   val unsafe = field.get(classOf[ScalaTermDecoder]).asInstanceOf[Unsafe]
 
   val stringValueOffset = unsafe.objectFieldOffset(classOf[String].getDeclaredField("value"))
-  val stringOffsetOffset = unsafe.objectFieldOffset(classOf[String].getDeclaredField("offset"))
-  val stringCountOffset = unsafe.objectFieldOffset(classOf[String].getDeclaredField("count"))
+  private[this] val stringUsesCount = classOf[String].getDeclaredFields.map{f => f.getName}.contains("count")
+  val stringCountOffset = {
+    if (stringUsesCount)
+      unsafe.objectFieldOffset(classOf[String].getDeclaredField("count"))
+    else
+      0
+  }
 
   // Initializes a string by creating an empty String object, then populating it with our own
   // backing char[] to prevent allocating / copying between byte[] or char[] twice.
@@ -49,7 +54,9 @@ object ScalaTermDecoder {
 
     val result = unsafe.allocateInstance(classOf[String]).asInstanceOf[String]
     unsafe.putObject(result, stringValueOffset, destArray)
-    unsafe.putInt(result, stringCountOffset, length)
+    if (stringUsesCount) {
+      unsafe.putInt(result, stringCountOffset, length)
+    }
     result
   }
 }

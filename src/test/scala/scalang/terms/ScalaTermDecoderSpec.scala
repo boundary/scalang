@@ -12,7 +12,7 @@ import scalang._
 class ScalaTermDecoderSpec extends SpecificationWithJUnit {
   "ScalaTermDecoder" should {
     "decode regular terms" in {
-      val decoder = new ScalaTermDecoder('test, NoneTypeFactory)
+      val decoder = new ScalaTermDecoder('test, NoneTypeFactory, NoneTypeDecoder)
 
       "read small integers" in {
         val thing = decoder.readTerm(copiedBuffer(ByteArray(97,2)))

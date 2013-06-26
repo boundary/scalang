@@ -203,7 +203,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   val executor = poolFactory.createActorPool
   val factory = new CappedFiberFactory(executor, 1000)
   val executionHandler = new ExecutionHandler(poolFactory.createExecutorPool)
-  val server = new ErlangNodeServer(this,config.typeFactory, config.typeEncoder)
+  val server = new ErlangNodeServer(this,config.typeFactory, config.typeEncoder, config.typeDecoder)
   val localEpmd = Epmd("localhost")
   localEpmd.alive(server.port, splitNodename(name)) match {
     case Some(c) => creation = c
@@ -863,7 +863,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     val peerName = splitNodename(peer)
     val port = Epmd(hostname).lookupPort(peerName).getOrElse(throw new ErlangNodeException("Cannot lookup peer: " + peer.name))
     val client = new ErlangNodeClient(this, peer, hostname, port, msg, config.typeFactory,
-      config.typeEncoder, afterHandshake)
+      config.typeEncoder, config.typeDecoder, afterHandshake)
     client.channel
   }
 

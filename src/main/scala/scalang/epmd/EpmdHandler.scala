@@ -15,14 +15,10 @@
 //
 package scalang.epmd
 
-import java.net._
 import java.util.concurrent.{ConcurrentLinkedQueue, Callable, CountDownLatch, atomic => atomic}
 import atomic._
 import org.jboss.{netty => netty}
-import netty.bootstrap._
 import netty.channel._
-import netty.handler.codec.frame._
-import scala.collection.JavaConversions._
 import com.codahale.logula.Logging
 import java.util.concurrent.TimeUnit
 
@@ -53,10 +49,12 @@ class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
 
   override def messageReceived(ctx : ChannelHandlerContext, e : MessageEvent) {
     val response = e.getMessage
-    var rsp = queue.poll
-    while (rsp != null) {
+    val rsp = queue.poll()
+    if (rsp != null) {
       rsp.set(response)
-      rsp = queue.poll
+    }
+    else {
+      log.warn("Unable to find EpmdResponse for: %s", response)
     }
   }
 
@@ -67,13 +65,13 @@ class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
 
     def setError(t : Throwable) {
       error.set(t)
-      lock.countDown
+      lock.countDown()
 
     }
 
     def set(v : Any) {
       response.set(v)
-      lock.countDown
+      lock.countDown()
     }
 
     def call : Any = {

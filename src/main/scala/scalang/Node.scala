@@ -29,7 +29,6 @@ import overlock.atomicmap._
 import org.jetlang._
 import core._
 import java.io._
-import fibers.CappedFiberFactory
 import core.BatchExecutorImpl
 import netty.handler.execution.ExecutionHandler
 import scala.collection.JavaConversions._
@@ -42,6 +41,7 @@ import org.jboss.netty.logging._
 import netty.util.HashedWheelTimer
 import com.yammer.metrics.scala._
 import java.nio.channels.ClosedChannelException
+import org.jetlang.fibers.PoolFiberFactory
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
@@ -201,7 +201,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
   val pidCount = new AtomicInteger(0)
   val pidSerial = new AtomicInteger(0)
   val executor = poolFactory.createActorPool
-  val factory = new CappedFiberFactory(executor, 1000)
+  val factory = new PoolFiberFactory(executor)
   val executionHandler = new ExecutionHandler(poolFactory.createExecutorPool)
   val server = new ErlangNodeServer(this,config.typeFactory, config.typeEncoder, config.typeDecoder)
   val localEpmd = Epmd("localhost")

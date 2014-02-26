@@ -179,7 +179,7 @@
                 <artifactId>cobertura-maven-plugin</artifactId>
                 <version>2.6</version>
                 <configuration>
-                    <check />
+                    <check/>
                     <formats>
                         <format>xml</format>
                         <format>html</format>

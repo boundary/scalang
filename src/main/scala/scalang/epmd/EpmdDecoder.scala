@@ -15,10 +15,7 @@
 //
 package scalang.epmd
 
-import java.net._
-import java.util.concurrent.Executors
 import org.jboss.{netty => netty}
-import netty.bootstrap._
 import netty.buffer._
 import netty.channel._
 import netty.handler.codec.frame._

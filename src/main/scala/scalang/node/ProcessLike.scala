@@ -16,11 +16,8 @@
 package scalang.node
 
 import scalang._
-import org.cliffc.high_scale_lib.NonBlockingHashSet
-import org.cliffc.high_scale_lib.NonBlockingHashMap
-import scala.collection.JavaConversions._
 import com.yammer.metrics.scala._
-import com.codahale.logula.Logging
+import com.boundary.logula.Logging
 
 trait ProcessLike extends Instrumented with Logging {
   def adapter : ProcessAdapter

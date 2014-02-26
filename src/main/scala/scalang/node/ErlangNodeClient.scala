@@ -22,7 +22,7 @@ import netty.channel._
 import netty.bootstrap._
 import netty.handler.codec.frame._
 import socket.nio.NioClientSocketChannelFactory
-import com.codahale.logula.Logging
+import com.boundary.logula.Logging
 
 
 class ErlangNodeClient(

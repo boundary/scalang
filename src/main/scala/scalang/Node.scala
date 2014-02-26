@@ -16,12 +16,8 @@
 package scalang
 
 import java.util.concurrent.atomic._
-import java.net.InetSocketAddress
-import java.util.concurrent.Executors
 import org.jboss.{netty => netty}
 import netty.channel._
-import netty.bootstrap._
-import socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent._
 import scalang.node._
 import org.cliffc.high_scale_lib._
@@ -29,19 +25,16 @@ import overlock.atomicmap._
 import org.jetlang._
 import core._
 import java.io._
-import core.BatchExecutorImpl
 import netty.handler.execution.ExecutionHandler
 import scala.collection.JavaConversions._
 import scalang.epmd._
 import scalang.util._
 import java.security.SecureRandom
-import com.codahale.logula.Logging
-import org.apache.log4j.Level
 import org.jboss.netty.logging._
 import netty.util.HashedWheelTimer
 import com.yammer.metrics.scala._
-import java.nio.channels.ClosedChannelException
 import org.jetlang.fibers.PoolFiberFactory
+import com.boundary.logula.Logging
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
@@ -187,7 +180,7 @@ class ErlangNode(val name : Symbol, val cookie : String, config : NodeConfig) ex
     with ReplyRegistry
     with Instrumented
     with Logging {
-  InternalLoggerFactory.setDefaultFactory(new Log4JLoggerFactory)
+  InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory)
 
   val timer = new HashedWheelTimer
   val tickTime = config.tickTime

@@ -21,14 +21,13 @@ import netty.channel._
 import java.nio._
 import java.math.BigInteger
 import netty.buffer._
-import scala.annotation.tailrec
 import scalang._
-import java.util.{Formatter, Locale}
+import java.util.Formatter
 import java.util.{List => JList}
 import scalang.util.ByteArray
 import scalang.util.CamelToUnder._
-import com.codahale.logula.Logging
 import com.yammer.metrics.scala._
+import com.boundary.logula.Logging
 
 class ScalaTermEncoder(peer: Symbol, encoder: TypeEncoder = NoneTypeEncoder) extends OneToOneEncoder with Logging with Instrumented {
 

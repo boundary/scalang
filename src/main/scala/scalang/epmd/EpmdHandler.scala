@@ -19,8 +19,8 @@ import java.util.concurrent.{ConcurrentLinkedQueue, Callable, CountDownLatch, at
 import atomic._
 import org.jboss.{netty => netty}
 import netty.channel._
-import com.codahale.logula.Logging
 import java.util.concurrent.TimeUnit
+import com.boundary.logula.Logging
 
 class EpmdHandler extends SimpleChannelUpstreamHandler with Logging {
   val queue = new ConcurrentLinkedQueue[EpmdResponse]

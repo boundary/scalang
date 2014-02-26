@@ -15,21 +15,15 @@
 //
 package scalang.node
 
-import java.net._
-import java.util.concurrent._
-import atomic._
 import org.jboss.{netty => netty}
-import netty.bootstrap._
 import netty.channel._
-import netty.handler.codec.frame._
 import scalang._
 import util._
 import java.util.ArrayDeque
-import scala.annotation._
 import scala.math._
 import scala.collection.JavaConversions._
 import java.security.{SecureRandom,MessageDigest}
-import com.codahale.logula.Logging
+import com.boundary.logula.Logging
 
 abstract class HandshakeHandler(posthandshake : (Symbol,ChannelPipeline) => Unit) extends SimpleChannelHandler with StateMachine with Logging {
   override val start = 'disconnected

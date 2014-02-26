@@ -15,14 +15,10 @@
 //
 package scalang.node
 
-import java.net._
-import java.util.concurrent._
-import atomic._
 import org.jboss.netty._
-import bootstrap._
 import channel._
 import scalang._
-import com.codahale.logula.Logging
+import com.boundary.logula.Logging
 
 class ErlangHandler(
     node : ErlangNode,

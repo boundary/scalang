@@ -20,11 +20,11 @@ import com.yammer.metrics.scala._
 import org.jetlang.fibers._
 import org.jetlang.channels._
 import org.jetlang.core._
-import com.codahale.logula.Logging
 import java.util.concurrent.TimeUnit
 import org.cliffc.high_scale_lib.NonBlockingHashSet
 import org.cliffc.high_scale_lib.NonBlockingHashMap
 import scala.collection.JavaConversions._
+import com.boundary.logula.Logging
 
 abstract class ProcessHolder(ctx : ProcessContext) extends ProcessAdapter {
   val self = ctx.pid

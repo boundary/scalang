@@ -30,7 +30,7 @@
         <dependency>
             <groupId>com.boundary</groupId>
             <artifactId>overlock-scala_${scala.version}</artifactId>
-            <version>0.8.4</version>
+            <version>0.8.5</version>
         </dependency>
         <dependency>
             <groupId>org.jetlang</groupId>
@@ -61,28 +61,7 @@
             <name>Boundary Public Repo</name>
             <url>http://maven.boundary.com/artifactory/repo/</url>
         </repository>
-        <repository>
-            <id>ScalaToolsMaven2Repository</id>
-            <name>Scala-Tools Maven2 Repository</name>
-            <url>http://scala-tools.org/repo-releases/</url>
-        </repository>
-        <repository>
-            <id>scala-tools.org</id>
-            <name>snapshots</name>
-            <url>http://scala-tools.org/repo-snapshots</url>
-        </repository>
-        <repository>
-            <id>central</id>
-            <name>Maven repository</name>
-            <url>http://repo1.maven.org/maven2</url>
-        </repository>
     </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>scala-tools-releases</id>
-            <url>http://scala-tools.org/repo-releases/</url>
-        </pluginRepository>
-    </pluginRepositories>
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
         <testSourceDirectory>src/test/scala</testSourceDirectory>
@@ -94,14 +73,8 @@
         <version>2.15.2</version>
         <executions>
           <execution>
-            <id>cmain</id>
             <goals>
               <goal>compile</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>ctest</id>
-            <goals>
               <goal>testCompile</goal>
             </goals>
           </execution>
@@ -113,24 +86,6 @@
           </args>
           <charset>UTF-8</charset>
           <scalaVersion>${scala.version}</scalaVersion>
-          <launchers>
-            <launcher>
-              <id>loadgen</id>
-              <mainClass>scalang.LoadGen</mainClass>
-              <args>
-                <arg>server</arg>
-              </args>
-              <jvmArgs>
-                <jvmArg>-Xmx1G</jvmArg>
-                <jvmArg>-Xms1G</jvmArg>
-                <jvmArg>-Dcom.sun.management.jmxremote.port=8083</jvmArg>
-                <jvmArg>-Dcom.sun.management.jmxremote.ssl=false</jvmArg>
-                <jvmArg>-Dcom.sun.management.jmxremote.authenticate=false</jvmArg>
-                <jvmArg>-Djava.rmi.server.hostname=localhost</jvmArg>
-                <jvmArg>-agentpath:/Users/cliff/Downloads/YourKit_Java_Profiler_10.0.6.app/bin/mac/libyjpagent.jnilib</jvmArg>
-              </jvmArgs>
-            </launcher>
-          </launchers>
         </configuration>
       </plugin>
 
@@ -139,8 +94,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                 </configuration>
             </plugin>
 
@@ -198,7 +153,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>cobertura-maven-plugin</artifactId>
-                <version>2.5.1</version>
+                <version>2.6</version>
             </plugin>
         </plugins>
     </reporting>
@@ -219,6 +174,5 @@
     <scm>
         <connection>scm:git:git@github.com:boundary/scalang.git</connection>
     </scm>
-
 
 </project>

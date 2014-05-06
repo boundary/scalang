@@ -25,8 +25,8 @@ import java.util.concurrent.Callable
 
 object Epmd {
   val defaultPort = 4369
-  lazy val bossPool = ThreadPool.instrumentedElastic("scalang.epmd", "boss", 1, 20)
-  lazy val workerPool = ThreadPool.instrumentedElastic("scalang.epmd", "worker", 1, 20)
+  lazy val bossPool = ThreadPool.instrumentedFixed("scalang.epmd", "boss", 20)
+  lazy val workerPool = ThreadPool.instrumentedFixed("scalang.epmd", "worker", 20)
 
   def apply(host : String) : Epmd = {
     val port = Option(System.getenv("ERL_EPMD_PORT")).map(_.toInt).getOrElse(defaultPort)

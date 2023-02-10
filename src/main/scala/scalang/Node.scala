@@ -40,6 +40,9 @@ object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
 
   def apply(name : String) : Node = apply(Symbol(name))
+  def apply(name : String, tpf : ThreadPoolFactory) : Node = apply(Symbol(name), tpf)
+  def apply(name : String, listener : ClusterListener) : Node = apply(Symbol(name), listener)
+  def apply(name : String, nodeConfig : NodeConfig) : Node = apply(Symbol(name), nodeConfig)
   def apply(name : String, cookie : String) : Node = apply(Symbol(name), cookie)
   def apply(name : String, cookie : String, tpf : ThreadPoolFactory) : Node = apply(Symbol(name), cookie, tpf)
   def apply(name : String, cookie : String, listener : ClusterListener) : Node = apply(Symbol(name), cookie, listener)
@@ -47,6 +50,15 @@ object Node {
 
   def apply(name : Symbol) =
     new ErlangNode(name, findOrGenerateCookie, NodeConfig(new DefaultThreadPoolFactory, None))
+
+  def apply(name : Symbol, tpf : ThreadPoolFactory) =
+    new ErlangNode(name, findOrGenerateCookie, NodeConfig(tpf, None))
+
+  def apply(name : Symbol, listener : ClusterListener) =
+    new ErlangNode(name, findOrGenerateCookie, NodeConfig(new DefaultThreadPoolFactory, Some(listener)))
+
+  def apply(name : Symbol, nodeConfig : NodeConfig) =
+    new ErlangNode(name, findOrGenerateCookie, nodeConfig)
 
   def apply(name : Symbol, cookie : String) =
     new ErlangNode(name, cookie, NodeConfig(new DefaultThreadPoolFactory, None))

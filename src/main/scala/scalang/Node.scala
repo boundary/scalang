@@ -35,6 +35,10 @@ import netty.util.HashedWheelTimer
 import com.yammer.metrics.scala._
 import org.jetlang.fibers.PoolFiberFactory
 import com.boundary.logula.Logging
+import scala.collection.JavaConverters._
+import java.nio.file.{ Path, Files }
+import java.nio.file.attribute.PosixFilePermission
+
 
 object Node {
   val random = SecureRandom.getInstance("SHA1PRNG")
@@ -83,6 +87,9 @@ object Node {
     } else {
       val cookie = randomCookie
       writeCookie(file, cookie)
+      val permissions = setAsJavaSet(Set(PosixFilePermission.OWNER_READ))
+      try
+        Files.setPosixFilePermissions(file.toPath, permissions)
       cookie
     }
   }
